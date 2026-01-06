@@ -30,7 +30,7 @@ with st.sidebar:
     st.caption(f"Iniciado em {datetime.now().strftime('%d/%m/%Y')}")
 
 # Página principal
-st.title("📊 Bem-vindo ao Meu LifeOS 2026")
+st.title("Bem-vindo ao Meu LifeOS 2026 - Projeto Phoenix")
 st.write("Seu sistema de acompanhamento pessoal para 2026")
 st.markdown("---")
 
