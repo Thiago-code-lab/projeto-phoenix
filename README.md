@@ -2,6 +2,8 @@
 
 #  Projeto Phoenix
 
+<img width="634" height="394" alt="Image" src="https://github.com/user-attachments/assets/87047499-9574-4df2-b478-b6ad5142deb4" />
+
 **Sua plataforma pessoal de transformação**
 
 Organize sua vida, acompanhe seu crescimento e alcance seus objetivos — tudo em um só lugar.
