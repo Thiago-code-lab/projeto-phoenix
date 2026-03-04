@@ -18,6 +18,23 @@ Organize sua vida, acompanhe seu crescimento e alcance seus objetivos — tudo e
 
 ---
 
+## 🌐 GitHub Pages
+
+Este repositório já inclui uma landing page em `index.html` e deploy automático em `.github/workflows/deploy-pages.yml`.
+
+### ✅ Como ativar
+
+1. Faça push na branch principal (`main` ou `master`).
+2. No GitHub, abra **Settings → Pages**.
+3. Em **Build and deployment**, selecione **Source: GitHub Actions**.
+4. Aguarde o workflow **Deploy GitHub Pages** na aba **Actions**.
+
+URL final:
+
+`https://<seu-usuario>.github.io/<nome-do-repositorio>/`
+
+---
+
 ## 💡 O que é?
 
 O Projeto Phoenix ajuda você a gerenciar todos os aspectos importantes da sua vida através de uma interface simples e intuitiva. Sem complicações, sem mensalidades, seus dados ficam com você.
