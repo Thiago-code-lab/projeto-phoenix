@@ -108,7 +108,7 @@ def show():
         ]
         
         for refeicao in refeicoes:
-            with st.container(border=True):
+            with st.container():
                 st.markdown(f"**{refeicao['hora']} - {refeicao['refeicao']}** ({refeicao['calorias']} kcal)")
                 st.caption(refeicao['alimentos'])
         

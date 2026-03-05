@@ -14,51 +14,55 @@ st.set_page_config(
 st.markdown("""
     <style>
     .study-card {
-        background: white;
+        background: #161929;
         padding: 20px;
         border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-        border-left: 5px solid #667eea;
+        box-shadow: 0 4px 24px rgba(13, 16, 33, 0.6);
+        border-left: 5px solid #f07020;
+        border: 1px solid #252b4a;
         margin-bottom: 15px;
     }
     .stat-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f5a623 0%, #f07020 100%);
         padding: 25px;
         border-radius: 15px;
         color: white;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(245,166,35,0.25), 0 2px 8px rgba(0,0,0,0.4);
     }
     .stat-card-orange {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, #f07020 0%, #e03a2f 100%);
         padding: 25px;
         border-radius: 15px;
         color: white;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(240,112,32,0.25), 0 2px 8px rgba(0,0,0,0.4);
     }
     .stat-card-blue {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        background: linear-gradient(135deg, #e03a2f 0%, #c0273b 100%);
         padding: 25px;
         border-radius: 15px;
         color: white;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(224,58,47,0.25), 0 2px 8px rgba(0,0,0,0.4);
     }
     .stat-card-green {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: linear-gradient(135deg, #c0273b 0%, #7b3fa0 100%);
         padding: 25px;
         border-radius: 15px;
         color: white;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(123,63,160,0.25), 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .study-card h3, .study-card p {
+        color: #edf0ff !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # Cabeçalho
-st.markdown("<h1 style='text-align: center; color: #667eea;'>💻 Estudos</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #666; font-size: 18px; margin-bottom: 30px;'>Organize e acompanhe seu aprendizado</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; background: linear-gradient(135deg,#f5a623,#f07020); -webkit-background-clip:text; -webkit-text-fill-color:transparent;'>💻 Estudos</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #8b93b8; font-size: 18px; margin-bottom: 30px;'>Organize e acompanhe seu aprendizado</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # Métricas principais
@@ -118,8 +122,8 @@ with tab1:
         })
         
         fig = px.bar(disciplinas_df, x='Disciplina', y='Horas',
-                     color='Horas', color_continuous_scale='Purples')
-        fig.update_layout(height=350, margin=dict(t=0, b=0, l=0, r=0), showlegend=False)
+                 color='Horas', color_continuous_scale=['#7b3fa0', '#f5a623'], template='plotly_dark')
+        fig.update_layout(height=350, margin=dict(t=0, b=0, l=0, r=0), showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
@@ -129,10 +133,9 @@ with tab1:
             'Horas': [3, 2, 4, 3, 5, 6, 2]
         })
         
-        fig = px.line(semana_df, x='Dia', y='Horas',
-                      markers=True, line_shape='spline')
-        fig.update_traces(line=dict(color='#667eea', width=3), marker=dict(size=10))
-        fig.update_layout(height=350, margin=dict(t=0, b=0, l=0, r=0))
+        fig = px.line(semana_df, x='Dia', y='Horas', markers=True, line_shape='spline', template='plotly_dark')
+        fig.update_traces(line=dict(color='#f07020', width=3), marker=dict(size=10))
+        fig.update_layout(height=350, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
     
     # Progresso por disciplina
@@ -243,7 +246,7 @@ with tab4:
     
     with col1:
         st.markdown("""
-            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              <div style='background: linear-gradient(135deg, #f07020 0%, #e03a2f 100%); 
                  padding: 40px; border-radius: 15px; color: white; text-align: center;'>
                 <h2>Meta Semanal de Estudo</h2>
                 <h1 style='font-size: 72px; margin: 20px 0;'>25 / 40</h1>
@@ -254,7 +257,7 @@ with tab4:
         st.markdown("<br>", unsafe_allow_html=True)
         progresso = (25 / 40) * 100
         st.progress(progresso / 100)
-        st.markdown(f"<p style='text-align: center; color: #666;'>Você completou {progresso:.1f}% da sua meta semanal!</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: #8b93b8;'>Você completou {progresso:.1f}% da sua meta semanal!</p>", unsafe_allow_html=True)
     
     with col2:
         st.markdown("#### ⚙️ Configurar Metas")
