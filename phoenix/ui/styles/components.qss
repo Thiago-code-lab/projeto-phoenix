@@ -1,0 +1,23 @@
+QScrollArea {
+    border: none;
+}
+QTableWidget {
+    gridline-color: #334155;
+    selection-background-color: #2563eb;
+}
+QHeaderView::section {
+    padding: 10px;
+    border: none;
+    background: transparent;
+    font-weight: 600;
+}
+QProgressBar {
+    border: none;
+    border-radius: 8px;
+    background: #1f2937;
+    text-align: center;
+}
+QProgressBar::chunk {
+    border-radius: 8px;
+    background: #22c55e;
+}

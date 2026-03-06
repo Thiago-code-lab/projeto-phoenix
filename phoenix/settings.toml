@@ -1,0 +1,52 @@
+[user]
+name = "Usuario"
+currency = "BRL"
+currency_symbol = "R$"
+
+[app]
+theme = "dark"
+language = "pt_BR"
+database_path = "phoenix.db"
+backup_path = "backups/"
+auto_save_interval = 2
+
+[pomodoro]
+focus_minutes = 25
+short_break_minutes = 5
+long_break_minutes = 15
+sessions_before_long_break = 4
+play_sound = true
+
+[dashboard]
+show_greeting = true
+widgets = ["stats", "finance_chart", "mood_chart", "habits_today", "tasks_active"]
+
+[finance]
+default_account = "Principal"
+categories_income = ["Salario", "Freelance", "Investimentos", "Outros"]
+categories_expense = [
+	"Moradia", "Alimentacao", "Transporte", "Saude",
+	"Educacao", "Lazer", "Roupas", "Assinaturas", "Outros"
+]
+
+[habits]
+week_starts_on = "monday"
+
+[library]
+genres = [
+	"Ficcao", "Nao-Ficcao", "Tecnico", "Biografia",
+	"Filosofia", "Historia", "Ciencias", "Autoajuda", "Outros"
+]
+
+[health]
+weight_unit = "kg"
+height_cm = 170
+water_daily_goal_ml = 2500
+sleep_daily_goal_hours = 8
+
+[review]
+areas = [
+	"Saude fisica", "Saude mental", "Carreira",
+	"Relacionamentos", "Financas", "Aprendizado",
+	"Lazer", "Proposito"
+]

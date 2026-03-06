@@ -1,0 +1,51 @@
+QMainWindow, QWidget {
+    background: #f5f7fb;
+    color: #0f172a;
+    font-family: "Segoe UI";
+    font-size: 14px;
+}
+QLabel#headerTitle {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+}
+QLabel#headerSubtitle {
+    color: #64748b;
+}
+QListWidget#sidebarList {
+    background: #ffffff;
+    border: none;
+    min-width: 230px;
+    padding: 16px 8px;
+}
+QListWidget#sidebarList::item {
+    padding: 12px 14px;
+    margin: 2px 0;
+    border-radius: 10px;
+}
+QListWidget#sidebarList::item:selected {
+    background: #e2e8f0;
+}
+QPushButton {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+QPushButton#secondaryButton {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+QFrame[card="true"] {
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-radius: 16px;
+}
+QLineEdit, QTextEdit, QDateEdit, QComboBox, QSpinBox, QDoubleSpinBox, QListWidget, QTableWidget, QTreeWidget {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px;
+}
