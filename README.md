@@ -17,6 +17,8 @@ Aplicacao desktop local-first para gestao pessoal completa, baseada em PyQt6 + S
 
 ## Estrutura
 
+Estrutura principal atual do projeto Phoenix 2.0.
+
 ```text
 projeto-phoenix/
 ├── main.py
@@ -37,7 +39,7 @@ projeto-phoenix/
 ### 1. Preparar ambiente (Windows PowerShell)
 
 ```powershell
-cd d:\Codigos\projeto-phoenix
+cd d:\Códigos\projeto-phoenix
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
