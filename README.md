@@ -1,63 +1,80 @@
-# Projeto Phoenix (Redesign)
+# Projeto Phoenix 2.0
 
-Plataforma pessoal all-in-one, local-first, construída com Streamlit + SQLite.
+Aplicacao desktop local-first para gestao pessoal completa, baseada em PyQt6 + SQLAlchemy + SQLite.
 
-## Principais características
-- Dashboard unificado com métricas reais do banco
-- Módulos: Metas, Hábitos, Finanças, Biblioteca, Saúde, Diário, Projetos (Kanban funcional)
-- Configurações globais (perfil, moeda, tema, backup do banco)
-- Banco local `phoenix.db` com criação automática na primeira execução
-- Arquitetura modular com componentes reutilizáveis
+## Features principais
 
-## Arquitetura
+- Dashboard consolidado com indicadores dos modulos
+- Metas com milestones, progresso e filtros
+- Habitos com check diario, streak e heatmap
+- Financas com resumo, transacoes, categorias e exportacao
+- Biblioteca com cards, progresso de leitura e estatisticas
+- Saude com registro diario, treinos e series historicas
+- Diario com edicao rica, tags e autosave
+- Projetos com modo Kanban e modo lista
+- Foco (Pomodoro) com historico e som de conclusao
+- Notes, Reviews e Settings integrados ao mesmo banco local
+
+## Estrutura
 
 ```text
 projeto-phoenix/
-├── app.py
-├── config.py
-├── phoenix.db
-├── database/
-│   ├── db.py
-│   └── migrations/
-├── modules/
-│   ├── dashboard/
-│   ├── goals/
-│   ├── habits/
-│   ├── finances/
-│   ├── library/
-│   ├── health/
-│   ├── journal/
-│   ├── projects/
-│   └── settings/
-├── components/
-├── styles/
-│   └── theme.css
-└── utils/
+├── main.py
+├── README.md
+├── requirements.txt
+└── phoenix/
+	├── main.py
+	├── core/
+	├── modules/
+	├── ui/
+	├── utils/
+	├── tests/
+	└── assets/
 ```
 
-## Como executar
+## Como usar
 
-1. Crie/ative seu ambiente virtual
-2. Instale dependências:
+### 1. Preparar ambiente (Windows PowerShell)
 
-```bash
+```powershell
+cd d:\Codigos\projeto-phoenix
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-3. Rode o app:
+### 2. Executar o Phoenix 2.0
 
-```bash
-streamlit run app.py
+Opcao A:
+
+```powershell
+python -m phoenix.main
 ```
 
-Acesse: `http://localhost:8501`
+Opcao B:
 
-## Observações
-- Tudo roda 100% local (sem API externa e sem login de terceiros)
-- O módulo de Projetos implementa Kanban com movimentação por seleção de coluna (alternativa leve ao drag-and-drop nativo)
-- O tema é aplicado via `styles/theme.css`
+```powershell
+python main.py
+```
 
-## Próximos aprimoramentos sugeridos
-- Melhorar editor rico do Diário com preview lado a lado
-- Adicionar paginação avançada para listas longas
-- Adicionar testes automatizados para regras de negócio do banco
+### 3. Testar o projeto
+
+```powershell
+$env:QT_QPA_PLATFORM='offscreen'
+python -m pytest phoenix\tests -q
+```
+
+### 4. Atalhos uteis
+
+- `Ctrl+1..9`: navegacao rapida entre modulos
+- `Ctrl+/`: painel de atalhos
+- `Ctrl+Z` / `Ctrl+Shift+Z`: undo/redo em telas com suporte
+
+## Stack tecnica
+
+- PyQt6
+- SQLAlchemy + SQLite
+- PyQtGraph + Matplotlib
+- ReportLab
+- Dynaconf
+- pytest + pytest-qt
