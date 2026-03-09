@@ -3,596 +3,679 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phoenix 2.0 - Personal Life OS</title>
-<meta name="description" content="Plataforma pessoal all-in-one. Local-first. Sem servidor. 12 modulos integrados. PyQt6 + SQLite.">
+<title>Phoenix 2.0 — Renasça do Zero</title>
+<meta name="description" content="Plataforma pessoal all-in-one. Local-first. Sem servidor. 12 módulos. PyQt6 + SQLite.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:         #08080a;
-  --bg-2:       #101014;
-  --bg-3:       #16161c;
-  --bg-4:       #1e1e26;
-  --border:     rgba(99,102,241,0.12);
-  --border-2:   rgba(99,102,241,0.30);
-  --accent:     #6366f1;
-  --accent-2:   #818cf8;
-  --cyan:       #22d3ee;
-  --green:      #10b981;
-  --amber:      #f59e0b;
-  --red:        #ef4444;
-  --text:       #f0f0f4;
-  --text-2:     #9898b0;
-  --text-3:     #50505e;
-  --glow:       rgba(99,102,241,0.18);
-  --mono:       'DM Mono', monospace;
-  --sans:       'DM Sans', sans-serif;
-  --display:    'Syne', sans-serif;
+  --bg:        #060508;
+  --bg-2:      #0c090e;
+  --bg-3:      #120a08;
+  --bg-4:      #1a0e06;
+  --border:    rgba(249,115,22,0.10);
+  --border-2:  rgba(249,115,22,0.28);
+  --border-3:  rgba(249,115,22,0.55);
+  --fire:      #f97316;
+  --ember:     #fb923c;
+  --gold:      #f59e0b;
+  --gold-2:    #fcd34d;
+  --crimson:   #dc2626;
+  --blood:     #991b1b;
+  --text:      #fef3c7;
+  --text-2:    #d4b896;
+  --text-3:    #6b5040;
+  --text-4:    #3d2a1a;
+  --glow:      rgba(249,115,22,0.22);
+  --glow-gold: rgba(245,158,11,0.18);
+  --mono:      'JetBrains Mono', monospace;
+  --body:      'Cormorant Garamond', Georgia, serif;
+  --display:   'Cinzel', serif;
+  --display-d: 'Cinzel Decorative', serif;
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 
 body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:var(--sans);
-  overflow-x:hidden;
-  line-height:1.6;
+  background:var(--bg);color:var(--text);
+  font-family:var(--body);overflow-x:hidden;
+  line-height:1.7;font-size:18px;
+  cursor:default;
 }
 
-/* -- GRID BACKGROUND -- */
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(99,102,241,0.035) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(99,102,241,0.035) 1px,transparent 1px);
-  background-size:48px 48px;
-  pointer-events:none;z-index:0;
+/* ═══ ATMOSPHERIC LAYERS ═══ */
+.atmo{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.atmo-radials{
+  background:
+    radial-gradient(ellipse 100% 60% at 50% -5%, rgba(180,30,20,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 110%, rgba(249,115,22,0.10) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 5%  90%,  rgba(245,158,11,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse 30% 30% at 50% 50%,  rgba(100,10,10,0.12) 0%, transparent 70%);
+}
+.atmo-grain{
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+  opacity:0.028;mix-blend-mode:overlay;
+}
+.atmo-vignette{
+  background:radial-gradient(ellipse 90% 80% at 50% 50%, transparent 40%, rgba(4,3,6,0.7) 100%);
 }
 
-/* -- SPOTLIGHT -- */
-.spotlight{
-  position:fixed;
-  width:800px;height:800px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(99,102,241,0.10) 0%,transparent 65%);
-  top:-200px;right:-200px;
-  pointer-events:none;z-index:0;
+/* ═══ EMBERS ═══ */
+.ember-field{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+.ember{
+  position:absolute;border-radius:50%;
+  animation:rise linear infinite;opacity:0;
 }
-.spotlight-2{
-  position:fixed;
-  width:600px;height:600px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(34,211,238,0.06) 0%,transparent 65%);
-  bottom:-100px;left:-100px;
-  pointer-events:none;z-index:0;
+@keyframes rise{
+  0%  {transform:translateY(0) translateX(0) scale(1) rotate(0deg);  opacity:0;}
+  8%  {opacity:1;}
+  85% {opacity:0.5;}
+  100%{transform:translateY(-110vh) translateX(var(--dx)) scale(0.15) rotate(180deg);opacity:0;}
 }
 
-/* -- NAV -- */
+/* ═══ NAV ═══ */
 nav{
   position:fixed;top:0;left:0;width:100%;
-  background:rgba(8,8,10,0.85);
-  backdrop-filter:blur(20px);
+  background:rgba(6,5,8,0.88);
+  backdrop-filter:blur(28px) saturate(1.4);
   border-bottom:1px solid var(--border);
-  z-index:100;
-  padding:0 24px;
-  height:56px;
+  z-index:200;padding:0 40px;height:62px;
   display:flex;align-items:center;justify-content:space-between;
 }
+nav::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,rgba(249,115,22,0.4) 30%,rgba(245,158,11,0.5) 50%,rgba(249,115,22,0.4) 70%,transparent 100%);
+}
 .nav-logo{
-  font-family:var(--display);
-  font-weight:800;font-size:1rem;
-  letter-spacing:-0.3px;
-  display:flex;align-items:center;gap:10px;
-  color:var(--text);
-  text-decoration:none;
+  font-family:var(--display-d);font-weight:700;font-size:0.88rem;
+  letter-spacing:4px;text-transform:uppercase;
+  display:flex;align-items:center;gap:14px;
+  color:var(--text);text-decoration:none;
 }
-.nav-logo-mark{
-  width:28px;height:28px;
-  background:linear-gradient(135deg,var(--accent),var(--cyan));
-  border-radius:7px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.7rem;font-weight:700;color:#fff;
-  font-family:var(--mono);
+.nav-logo-emblem{
+  position:relative;width:36px;height:36px;
 }
-.nav-links{
-  display:flex;align-items:center;gap:6px;
-  list-style:none;
-}
+.nav-logo-emblem svg{width:36px;height:36px;filter:drop-shadow(0 0 12px rgba(249,115,22,0.55));}
+.nav-links{display:flex;align-items:center;gap:2px;list-style:none;}
 .nav-links a{
-  font-family:var(--mono);font-size:0.72rem;
-  color:var(--text-2);text-decoration:none;
-  padding:6px 12px;border-radius:6px;
-  transition:all 0.2s;letter-spacing:0.3px;
+  font-family:var(--display);font-size:0.58rem;color:var(--text-3);
+  text-decoration:none;padding:7px 15px;
+  transition:all 0.2s;letter-spacing:2.5px;text-transform:uppercase;
 }
-.nav-links a:hover{color:var(--text);background:var(--bg-4);}
+.nav-links a:hover{color:var(--ember);}
 .nav-cta{
-  font-family:var(--mono);font-size:0.72rem;font-weight:500;
-  color:#fff;text-decoration:none;
-  background:var(--accent);
-  padding:7px 16px;border-radius:6px;
-  transition:all 0.2s;letter-spacing:0.3px;
+  font-family:var(--display);font-size:0.58rem;font-weight:700;
+  letter-spacing:2.5px;text-transform:uppercase;
+  color:#0a0608;text-decoration:none;
+  background:linear-gradient(135deg,var(--crimson) 0%,var(--fire) 50%,var(--gold) 100%);
+  padding:9px 22px;border-radius:2px;transition:all 0.25s;
+  box-shadow:0 2px 20px rgba(220,38,38,0.25);
 }
-.nav-cta:hover{background:var(--accent-2);box-shadow:0 0 20px var(--glow);}
+.nav-cta:hover{box-shadow:0 4px 32px rgba(249,115,22,0.5);filter:brightness(1.12);}
 
-/* -- SECTIONS -- */
-section{position:relative;z-index:1;}
+section,div.z1{position:relative;z-index:2;}
 
-/* -- HERO -- */
+/* ═══ DIVIDERS ═══ */
+.divider{
+  position:relative;width:100%;height:1px;margin:0;
+  background:linear-gradient(90deg,transparent,rgba(249,115,22,0.3) 30%,rgba(245,158,11,0.5) 50%,rgba(249,115,22,0.3) 70%,transparent);
+}
+.divider::before{
+  content:'❧';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:0.8rem;color:var(--fire);background:var(--bg);padding:0 16px;
+  text-shadow:0 0 12px var(--fire);
+}
+
+/* ═══ ORNAMENT ═══ */
+.ornament{
+  display:flex;align-items:center;gap:18px;
+  justify-content:center;margin-bottom:24px;
+}
+.ornament-line{
+  height:1px;width:80px;
+  background:linear-gradient(90deg,transparent,var(--fire));
+}
+.ornament-line.r{background:linear-gradient(90deg,var(--fire),transparent);}
+.ornament-glyph{
+  font-family:var(--display);font-size:0.6rem;color:var(--gold);
+  letter-spacing:3px;opacity:0.7;
+}
+
+/* ═══ HERO ═══ */
 #hero{
   min-height:100vh;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  padding:120px 24px 80px;
-  text-align:center;
+  padding:140px 24px 100px;text-align:center;
+  position:relative;
 }
 
-.hero-badge{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(99,102,241,0.08);
-  border:1px solid rgba(99,102,241,0.25);
-  border-radius:20px;padding:6px 16px;
-  font-family:var(--mono);font-size:0.72rem;
-  color:var(--accent-2);letter-spacing:0.5px;
-  margin-bottom:32px;
+/* Flame silhouette SVG behind title */
+.hero-flame-bg{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-58%);
+  width:min(600px,90vw);
+  opacity:0.055;
+  pointer-events:none;z-index:0;
+  filter:blur(2px);
 }
-.hero-badge-dot{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--green);
-  box-shadow:0 0 8px var(--green);
-  animation:pulse 2s ease-in-out infinite;
+
+.hero-eyebrow{
+  font-family:var(--display);font-size:0.58rem;
+  letter-spacing:6px;text-transform:uppercase;
+  color:var(--fire);margin-bottom:44px;
+  display:flex;align-items:center;gap:16px;
+  position:relative;z-index:1;
 }
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.hero-eyebrow-line{
+  display:block;width:48px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--fire));
+}
+.hero-eyebrow-line.r{background:linear-gradient(90deg,var(--fire),transparent);}
 
 .hero-title{
-  font-family:var(--display);
-  font-size:clamp(2.8rem,6vw,5.5rem);
-  font-weight:800;
-  letter-spacing:-2px;
-  line-height:1.05;
-  margin-bottom:12px;
-  color:var(--text);
-}
-.hero-title span{
-  background:linear-gradient(135deg,var(--accent-2) 0%,var(--cyan) 100%);
+  font-family:var(--display-d);
+  font-size:clamp(4rem,12vw,10rem);
+  font-weight:900;
+  letter-spacing:clamp(8px,2vw,24px);
+  text-transform:uppercase;
+  line-height:0.9;margin-bottom:16px;
+  background:linear-gradient(180deg,
+    #fff5e4 0%,
+    #fde68a 18%,
+    var(--ember) 38%,
+    var(--fire) 58%,
+    #c2410c 78%,
+    var(--blood) 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 60px rgba(249,115,22,0.35)) drop-shadow(0 0 20px rgba(220,38,38,0.25));
+  position:relative;z-index:1;
 }
-
-.hero-sub{
+.hero-version{
   font-family:var(--display);
-  font-size:clamp(1.1rem,2vw,1.5rem);
-  color:var(--text-2);font-weight:500;
-  letter-spacing:-0.3px;margin-bottom:24px;
+  font-size:clamp(0.6rem,1.2vw,0.8rem);
+  letter-spacing:clamp(6px,2vw,14px);
+  text-transform:uppercase;color:var(--gold);
+  margin-bottom:20px;font-weight:400;
+  position:relative;z-index:1;
 }
-
-.hero-desc{
-  max-width:560px;
-  font-size:0.95rem;color:var(--text-2);
-  line-height:1.8;margin-bottom:40px;
+.hero-rule{
+  width:120px;height:1px;margin:0 auto 28px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
 }
-
+.hero-subtitle{
+  font-family:var(--body);font-size:clamp(1.1rem,2vw,1.45rem);
+  color:var(--text-2);font-style:italic;font-weight:300;
+  max-width:480px;line-height:1.95;margin-bottom:52px;
+  position:relative;z-index:1;
+}
+.hero-subtitle em{
+  color:var(--ember);font-style:normal;
+  text-shadow:0 0 18px rgba(249,115,22,0.3);
+}
+.hero-subtitle strong{
+  color:var(--gold-2);font-weight:400;font-style:normal;
+}
 .hero-actions{
-  display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;
-  margin-bottom:80px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  justify-content:center;margin-bottom:72px;
+  position:relative;z-index:1;
 }
-.btn-primary{
-  display:inline-flex;align-items:center;gap:8px;
-  background:var(--accent);color:#fff;
-  font-family:var(--mono);font-size:0.82rem;font-weight:500;
-  padding:11px 22px;border-radius:8px;
-  text-decoration:none;transition:all 0.2s;
-  border:1px solid transparent;
-}
-.btn-primary:hover{background:var(--accent-2);box-shadow:0 0 30px var(--glow);}
-.btn-secondary{
-  display:inline-flex;align-items:center;gap:8px;
-  background:transparent;color:var(--text-2);
-  font-family:var(--mono);font-size:0.82rem;
-  padding:11px 22px;border-radius:8px;
-  text-decoration:none;transition:all 0.2s;
-  border:1px solid var(--border-2);
-}
-.btn-secondary:hover{color:var(--text);border-color:rgba(99,102,241,0.5);background:var(--bg-4);}
 
-/* -- METRICS -- */
+/* Buttons */
+.btn-primary{
+  display:inline-flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,var(--blood) 0%,var(--crimson) 30%,var(--fire) 100%);
+  color:#fff;font-family:var(--display);font-size:0.58rem;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  padding:15px 32px;border-radius:2px;text-decoration:none;
+  transition:all 0.25s;
+  box-shadow:0 4px 28px rgba(220,38,38,0.3),inset 0 1px 0 rgba(255,255,255,0.08);
+  border:1px solid rgba(220,38,38,0.4);
+}
+.btn-primary:hover{
+  box-shadow:0 8px 48px rgba(249,115,22,0.55),inset 0 1px 0 rgba(255,255,255,0.12);
+  filter:brightness(1.12);transform:translateY(-2px);
+}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:10px;
+  background:rgba(249,115,22,0.04);color:var(--text-3);
+  font-family:var(--display);font-size:0.58rem;font-weight:600;
+  letter-spacing:3px;text-transform:uppercase;
+  padding:15px 32px;border-radius:2px;text-decoration:none;
+  transition:all 0.25s;border:1px solid var(--border-2);
+}
+.btn-secondary:hover{
+  color:var(--ember);border-color:rgba(249,115,22,0.5);
+  background:rgba(249,115,22,0.07);transform:translateY(-1px);
+}
+
+/* ═══ METRICS ═══ */
 .hero-metrics{
-  display:flex;align-items:stretch;gap:0;
+  display:flex;align-items:stretch;position:relative;z-index:1;
   background:var(--bg-2);
-  border:1px solid var(--border);
-  border-radius:12px;
-  overflow:hidden;
-  max-width:640px;width:100%;
+  border:1px solid var(--border-2);
+  border-radius:3px;overflow:hidden;
+  max-width:580px;width:100%;
+  box-shadow:0 0 80px rgba(0,0,0,0.6),
+             0 0 40px rgba(249,115,22,0.06),
+             inset 0 1px 0 rgba(249,115,22,0.1);
+}
+.hero-metrics::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold) 30%,var(--fire) 50%,var(--gold) 70%,transparent);
 }
 .metric{
-  flex:1;padding:20px 16px;
-  border-right:1px solid var(--border);
-  text-align:center;
+  flex:1;padding:24px 10px;
+  border-right:1px solid var(--border);text-align:center;
 }
 .metric:last-child{border-right:none;}
 .metric-val{
-  font-family:var(--display);
-  font-size:1.6rem;font-weight:800;
-  letter-spacing:-1px;
-  background:linear-gradient(135deg,var(--accent-2),var(--cyan));
+  font-family:var(--display-d);font-size:1.6rem;font-weight:900;
+  letter-spacing:1px;
+  background:linear-gradient(180deg,var(--gold-2),var(--gold),var(--fire));
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  line-height:1;margin-bottom:4px;
+  line-height:1;margin-bottom:8px;
+  filter:drop-shadow(0 0 8px rgba(245,158,11,0.3));
 }
 .metric-label{
-  font-family:var(--mono);font-size:0.62rem;
-  color:var(--text-3);letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--display);font-size:0.48rem;
+  color:var(--text-4);letter-spacing:3px;text-transform:uppercase;
 }
 
-/* -- APP WINDOW MOCKUP -- */
+/* ═══ APP MOCKUP ═══ */
 .app-mockup-wrap{
-  max-width:960px;margin:0 auto;padding:0 24px;
-  position:relative;z-index:1;
+  max-width:980px;margin:0 auto;
+  padding:0 24px;position:relative;z-index:2;
 }
 .app-window{
   background:var(--bg-2);
   border:1px solid var(--border-2);
-  border-radius:14px;
-  overflow:hidden;
-  box-shadow:0 40px 100px rgba(0,0,0,0.6),0 0 0 1px var(--border);
+  border-radius:8px;overflow:hidden;
+  box-shadow:
+    0 80px 140px rgba(0,0,0,0.8),
+    0 0 100px rgba(249,115,22,0.08),
+    0 0 0 1px var(--border),
+    inset 0 1px 0 rgba(249,115,22,0.08);
 }
 .app-titlebar{
   display:flex;align-items:center;gap:10px;
-  padding:12px 16px;
-  background:var(--bg-3);
+  padding:13px 18px;
+  background:linear-gradient(180deg,#1a0e08,#120a06);
   border-bottom:1px solid var(--border);
 }
-.traffic-lights{display:flex;gap:6px;}
+.traffic-lights{display:flex;gap:7px;}
 .tl{width:11px;height:11px;border-radius:50%;}
-.tl-red{background:#ef4444;}
-.tl-yellow{background:#f59e0b;}
-.tl-green{background:#10b981;}
+.tl-red{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.4);}
+.tl-yellow{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.4);}
+.tl-green{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.4);}
 .app-title{
-  font-family:var(--mono);font-size:0.72rem;
-  color:var(--text-3);letter-spacing:0.3px;
-  margin-left:auto;margin-right:auto;
-  transform:translateX(-20px);
+  font-family:var(--display);font-size:0.56rem;color:var(--text-4);
+  letter-spacing:4px;text-transform:uppercase;
+  margin-left:auto;margin-right:auto;transform:translateX(-22px);
 }
-.app-body{
-  display:grid;grid-template-columns:200px 1fr;
-  min-height:420px;
-}
+.app-body{display:grid;grid-template-columns:196px 1fr;min-height:430px;}
 .app-sidebar{
-  background:var(--bg-3);
-  border-right:1px solid var(--border);
-  padding:16px 0;
+  background:linear-gradient(180deg,#120a08,#0e0806);
+  border-right:1px solid var(--border);padding:16px 0;
 }
 .app-sidebar-logo{
-  font-family:var(--display);font-size:0.88rem;font-weight:700;
-  color:var(--text);padding:0 16px 16px;
-  border-bottom:1px solid var(--border);
-  margin-bottom:8px;
-  display:flex;align-items:center;gap:8px;
+  font-family:var(--display-d);font-size:0.68rem;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--ember);
+  padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:10px;
+  display:flex;align-items:center;gap:10px;
 }
-.app-sidebar-logo-mark{
-  width:22px;height:22px;
-  background:linear-gradient(135deg,var(--accent),var(--cyan));
-  border-radius:5px;
-  flex-shrink:0;
+.app-sidebar-flame{
+  width:18px;height:22px;flex-shrink:0;position:relative;
 }
+.app-sidebar-flame svg{filter:drop-shadow(0 0 6px rgba(249,115,22,0.5));}
 .sidebar-section{
-  font-family:var(--mono);font-size:0.58rem;
-  color:var(--text-3);letter-spacing:2px;text-transform:uppercase;
-  padding:12px 16px 4px;
+  font-family:var(--display);font-size:0.46rem;color:var(--text-4);
+  letter-spacing:3px;text-transform:uppercase;padding:14px 16px 4px;
 }
 .sidebar-item{
-  display:flex;align-items:center;gap:8px;
-  font-family:var(--mono);font-size:0.72rem;
-  color:var(--text-2);padding:6px 16px;
-  cursor:default;transition:all 0.15s;
-  border-radius:0;
+  display:flex;align-items:center;gap:9px;
+  font-family:var(--display);font-size:0.58rem;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text-3);padding:7px 16px;cursor:default;transition:all 0.15s;
 }
 .sidebar-item:hover,.sidebar-item.active{
-  background:var(--bg-4);color:var(--text);
+  background:rgba(249,115,22,0.05);color:var(--text-2);
 }
 .sidebar-item.active{
-  color:var(--accent-2);
-  border-right:2px solid var(--accent);
+  color:var(--ember);border-right:2px solid var(--fire);
 }
-.sidebar-dot{
-  width:6px;height:6px;border-radius:50%;flex-shrink:0;
-}
-.app-content{
-  padding:24px;
-  display:flex;flex-direction:column;gap:16px;
-}
+.sidebar-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+.app-content{padding:24px;display:flex;flex-direction:column;gap:16px;background:var(--bg-2);}
 .content-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:4px;
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;
+  padding-bottom:12px;border-bottom:1px solid var(--border);
 }
 .content-title{
-  font-family:var(--display);font-size:1.1rem;font-weight:700;
-  color:var(--text);letter-spacing:-0.3px;
+  font-family:var(--display);font-size:0.85rem;font-weight:700;
+  letter-spacing:4px;text-transform:uppercase;color:var(--text);
 }
 .content-badge{
-  font-family:var(--mono);font-size:0.65rem;
-  background:rgba(99,102,241,0.12);
-  border:1px solid rgba(99,102,241,0.25);
-  color:var(--accent-2);
-  padding:3px 10px;border-radius:4px;
+  font-family:var(--mono);font-size:0.58rem;
+  background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.18);
+  color:var(--ember);padding:3px 10px;border-radius:2px;letter-spacing:0.5px;
 }
-.stat-row{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
-}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .stat-card{
-  background:var(--bg-4);
-  border:1px solid var(--border);
-  border-radius:8px;padding:14px;
+  background:var(--bg-4);border:1px solid var(--border);
+  border-radius:3px;padding:14px;
+  transition:border-color 0.2s;
 }
+.stat-card:hover{border-color:var(--border-2);}
 .stat-card-val{
-  font-family:var(--display);font-size:1.3rem;font-weight:700;
-  letter-spacing:-0.5px;color:var(--text);line-height:1;margin-bottom:4px;
+  font-family:var(--display);font-size:1.25rem;font-weight:700;
+  color:var(--text);line-height:1;margin-bottom:5px;
 }
 .stat-card-label{
-  font-family:var(--mono);font-size:0.6rem;
-  color:var(--text-3);letter-spacing:0.8px;text-transform:uppercase;
+  font-family:var(--display);font-size:0.45rem;color:var(--text-3);
+  letter-spacing:2px;text-transform:uppercase;
 }
 .stat-card-delta{
-  font-family:var(--mono);font-size:0.65rem;
-  color:var(--green);margin-top:6px;
+  font-family:var(--mono);font-size:0.55rem;color:var(--gold);margin-top:7px;
 }
 .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.chart-card{
-  background:var(--bg-4);
-  border:1px solid var(--border);
-  border-radius:8px;padding:14px;
-}
+.chart-card{background:var(--bg-4);border:1px solid var(--border);border-radius:3px;padding:14px;}
 .chart-card-label{
-  font-family:var(--mono);font-size:0.65rem;
-  color:var(--text-3);margin-bottom:12px;letter-spacing:0.5px;
+  font-family:var(--display);font-size:0.46rem;color:var(--text-3);
+  margin-bottom:12px;letter-spacing:2.5px;text-transform:uppercase;
 }
-.bar-chart{display:flex;align-items:flex-end;gap:4px;height:60px;}
+.bar-chart{display:flex;align-items:flex-end;gap:5px;height:58px;}
 .bar{
-  flex:1;border-radius:3px 3px 0 0;
-  background:linear-gradient(180deg,var(--accent) 0%,rgba(99,102,241,0.3) 100%);
+  flex:1;border-radius:2px 2px 0 0;
+  background:linear-gradient(180deg,var(--gold-2) 0%,var(--gold) 20%,var(--fire) 55%,var(--crimson) 100%);
   transition:all 0.3s;
 }
-.bar:hover{filter:brightness(1.3);}
-.progress-list{display:flex;flex-direction:column;gap:8px;}
+.bar:hover{filter:brightness(1.3);box-shadow:0 0 14px rgba(249,115,22,0.5);}
+.progress-list{display:flex;flex-direction:column;gap:9px;}
 .progress-header{
   display:flex;justify-content:space-between;
-  font-family:var(--mono);font-size:0.62rem;color:var(--text-2);
-  margin-bottom:4px;
+  font-family:var(--display);font-size:0.52rem;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text-2);margin-bottom:4px;
 }
-.progress-track{height:4px;background:var(--bg);border-radius:2px;overflow:hidden;}
-.progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--cyan));}
+.progress-track{height:3px;background:rgba(0,0,0,0.4);border-radius:2px;overflow:hidden;}
+.progress-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,var(--blood),var(--crimson),var(--fire),var(--gold));
+}
 .habit-row{
-  display:flex;align-items:center;gap:8px;
+  display:flex;align-items:center;gap:9px;
   background:var(--bg-4);border:1px solid var(--border);
-  border-radius:8px;padding:10px 14px;
+  border-radius:3px;padding:9px 13px;
 }
 .habit-check{
-  width:14px;height:14px;border-radius:3px;
+  width:13px;height:13px;border-radius:2px;
   border:1.5px solid var(--border-2);flex-shrink:0;
-  background:rgba(99,102,241,0.2);
 }
-.habit-check.done{background:var(--green);border-color:var(--green);}
-.habit-name{font-family:var(--mono);font-size:0.7rem;color:var(--text-2);flex:1;}
-.habit-streak{font-family:var(--mono);font-size:0.62rem;color:var(--amber);}
+.habit-check.done{
+  background:linear-gradient(135deg,var(--fire),var(--gold));
+  border-color:var(--fire);box-shadow:0 0 8px rgba(249,115,22,0.4);
+}
+.habit-name{
+  font-family:var(--display);font-size:0.56rem;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--text-2);flex:1;
+}
+.habit-streak{font-family:var(--mono);font-size:0.56rem;color:var(--gold);}
 
-/* -- FEATURES SECTION -- */
-#features{padding:100px 24px;}
-.section-label{
-  font-family:var(--mono);font-size:0.72rem;
-  color:var(--accent-2);letter-spacing:2px;text-transform:uppercase;
-  text-align:center;margin-bottom:16px;
+/* ═══ SECTION COMMON ═══ */
+.section-eyebrow{
+  font-family:var(--display);font-size:0.56rem;letter-spacing:6px;
+  text-transform:uppercase;color:var(--fire);
+  text-align:center;margin-bottom:20px;
 }
 .section-title{
-  font-family:var(--display);
-  font-size:clamp(1.8rem,3.5vw,2.8rem);
-  font-weight:800;letter-spacing:-1px;
-  text-align:center;line-height:1.1;
-  margin-bottom:16px;color:var(--text);
+  font-family:var(--display-d);
+  font-size:clamp(1.7rem,3.5vw,2.9rem);
+  font-weight:900;letter-spacing:3px;text-transform:uppercase;
+  text-align:center;line-height:1.05;margin-bottom:14px;
+  color:var(--text);
+}
+.section-title span{
+  background:linear-gradient(135deg,var(--ember),var(--gold));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .section-desc{
-  text-align:center;max-width:500px;margin:0 auto 60px;
-  font-size:0.93rem;color:var(--text-2);line-height:1.75;
+  text-align:center;max-width:520px;margin:0 auto 68px;
+  font-size:1.1rem;color:var(--text-2);line-height:1.9;
+  font-style:italic;font-weight:300;
 }
+
+/* ═══ FEATURES ═══ */
+#features{padding:120px 24px 100px;}
 .features-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:16px;max-width:1000px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;max-width:1020px;margin:0 auto;
+  background:var(--border);
+  border:1px solid var(--border);border-radius:4px;overflow:hidden;
 }
 .feature-card{
   background:var(--bg-2);
-  border:1px solid var(--border);
-  border-radius:12px;padding:28px;
-  transition:all 0.25s;
+  padding:34px 28px;transition:all 0.3s;
   position:relative;overflow:hidden;
 }
-.feature-card::before{
-  content:'';position:absolute;
-  top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);
-  opacity:0;transition:opacity 0.3s;
+.feature-card::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 30% 110%,rgba(249,115,22,0.09) 0%,transparent 60%);
+  opacity:0;transition:opacity 0.4s;
 }
-.feature-card:hover{
-  border-color:var(--border-2);
-  background:var(--bg-3);
-  transform:translateY(-3px);
-  box-shadow:0 12px 40px rgba(0,0,0,0.4);
-}
-.feature-card:hover::before{opacity:1;}
-.feature-icon{
-  width:36px;height:36px;border-radius:8px;
-  border:1px solid var(--border-2);
-  background:rgba(99,102,241,0.08);
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:16px;font-size:0.85rem;
+.feature-card:hover{background:var(--bg-3);}
+.feature-card:hover::after{opacity:1;}
+.feature-num{
+  font-family:var(--display-d);font-size:2rem;font-weight:900;
+  margin-bottom:20px;display:block;
+  background:linear-gradient(135deg,var(--fire),var(--blood));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:2px;
+  filter:drop-shadow(0 0 10px rgba(249,115,22,0.2));
+  line-height:1;
 }
 .feature-name{
-  font-family:var(--display);font-size:0.95rem;font-weight:700;
-  color:var(--text);margin-bottom:8px;letter-spacing:-0.2px;
+  font-family:var(--display);font-size:0.78rem;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--text);margin-bottom:12px;
 }
 .feature-desc{
-  font-size:0.82rem;color:var(--text-2);line-height:1.7;
+  font-size:0.95rem;color:var(--text-2);line-height:1.8;
+  font-weight:300;
 }
 .feature-tag{
-  display:inline-block;margin-top:14px;
-  font-family:var(--mono);font-size:0.6rem;
-  color:var(--text-3);letter-spacing:1px;
+  display:inline-block;margin-top:18px;
+  font-family:var(--mono);font-size:0.52rem;color:var(--text-4);letter-spacing:1px;
 }
 
-/* -- MODULES SECTION -- */
-#modules{padding:80px 24px;background:var(--bg-2);}
-.modules-wrap{max-width:1000px;margin:0 auto;}
+/* ═══ MODULES ═══ */
+#modules{
+  padding:100px 24px;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 50%,var(--bg) 100%);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.modules-wrap{max-width:1020px;margin:0 auto;}
 .modules-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
-  margin-top:48px;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;margin-top:56px;
+  background:var(--border);
+  border:1px solid var(--border);border-radius:4px;overflow:hidden;
 }
 .module-card{
-  background:var(--bg-3);
-  border:1px solid var(--border);
-  border-radius:10px;padding:20px 16px;
-  transition:all 0.2s;cursor:default;
+  background:var(--bg-2);
+  padding:24px 20px;transition:all 0.25s;cursor:default;
+  position:relative;overflow:hidden;
 }
-.module-card:hover{
-  border-color:var(--border-2);
-  background:var(--bg-4);
-  transform:translateY(-2px);
+.module-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:linear-gradient(180deg,transparent,var(--fire),transparent);
+  opacity:0;transition:opacity 0.3s;
 }
-.module-icon{
-  font-size:1.2rem;margin-bottom:10px;
-  display:block;filter:grayscale(0.3);
+.module-card:hover{background:var(--bg-3);}
+.module-card:hover::before{opacity:1;}
+.module-roman{
+  font-family:var(--display-d);font-size:0.85rem;font-weight:700;
+  margin-bottom:10px;display:block;
+  background:linear-gradient(135deg,var(--fire),var(--gold));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:2px;
 }
 .module-name{
-  font-family:var(--display);font-size:0.88rem;font-weight:700;
-  color:var(--text);margin-bottom:4px;letter-spacing:-0.2px;
+  font-family:var(--display);font-size:0.7rem;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:6px;
 }
 .module-desc{
-  font-size:0.76rem;color:var(--text-2);line-height:1.5;
+  font-size:0.78rem;color:var(--text-3);line-height:1.55;font-weight:300;
 }
 .module-badge{
-  display:inline-block;margin-top:10px;
-  font-family:var(--mono);font-size:0.58rem;letter-spacing:0.8px;
-  padding:2px 8px;border-radius:3px;text-transform:uppercase;
+  display:inline-block;margin-top:12px;
+  font-family:var(--display);font-size:0.46rem;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:2px 9px;border-radius:2px;
 }
-.badge-new{background:rgba(99,102,241,0.12);color:var(--accent-2);border:1px solid var(--border-2);}
-.badge-core{background:rgba(16,185,129,0.10);color:var(--green);border:1px solid rgba(16,185,129,0.2);}
+.badge-new{
+  background:rgba(249,115,22,0.09);color:var(--ember);
+  border:1px solid rgba(249,115,22,0.22);
+}
+.badge-core{
+  background:rgba(245,158,11,0.07);color:var(--gold);
+  border:1px solid rgba(245,158,11,0.18);
+}
 
-/* -- STACK SECTION -- */
-#stack{padding:80px 24px;}
-.stack-wrap{max-width:900px;margin:0 auto;}
+/* ═══ STACK ═══ */
+#stack{padding:100px 24px;}
+.stack-wrap{max-width:920px;margin:0 auto;}
 .stack-grid{
-  display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
-  margin-top:48px;
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:1px;margin-top:56px;
+  background:var(--border);
+  border:1px solid var(--border);border-radius:4px;overflow:hidden;
 }
 .stack-item{
-  display:flex;align-items:center;gap:14px;
-  background:var(--bg-2);border:1px solid var(--border);
-  border-radius:10px;padding:16px 20px;
-  transition:all 0.2s;
+  display:flex;align-items:center;gap:18px;
+  background:var(--bg-2);padding:20px 24px;transition:all 0.2s;
 }
-.stack-item:hover{border-color:var(--border-2);background:var(--bg-3);}
+.stack-item:hover{background:var(--bg-3);}
 .stack-item-icon{
-  width:38px;height:38px;border-radius:8px;
-  background:var(--bg-4);border:1px solid var(--border);
+  width:44px;height:44px;border-radius:2px;
+  background:var(--bg-4);border:1px solid var(--border-2);
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:0.65rem;font-weight:700;
-  color:var(--accent-2);flex-shrink:0;letter-spacing:0.3px;
+  font-family:var(--display);font-size:0.55rem;font-weight:700;
+  color:var(--fire);flex-shrink:0;letter-spacing:1px;text-transform:uppercase;
 }
 .stack-item-name{
-  font-family:var(--display);font-size:0.88rem;font-weight:700;
-  color:var(--text);margin-bottom:2px;
+  font-family:var(--display);font-size:0.75rem;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--text);margin-bottom:3px;
 }
-.stack-item-desc{font-size:0.76rem;color:var(--text-2);}
+.stack-item-desc{font-size:0.85rem;color:var(--text-2);font-weight:300;}
 .stack-item-tag{
   margin-left:auto;flex-shrink:0;
-  font-family:var(--mono);font-size:0.6rem;
-  color:var(--text-3);letter-spacing:0.5px;
+  font-family:var(--mono);font-size:0.52rem;color:var(--text-4);
 }
 
-/* -- TERMINAL SECTION -- */
-#install{padding:80px 24px;background:var(--bg-2);}
-.terminal-wrap{max-width:700px;margin:48px auto 0;}
+/* ═══ INSTALL ═══ */
+#install{
+  padding:100px 24px;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 50%,var(--bg) 100%);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.terminal-wrap{max-width:700px;margin:56px auto 0;}
 .terminal{
-  background:#0d0d10;
-  border:1px solid var(--border-2);
-  border-radius:12px;overflow:hidden;
-  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  background:#040308;border:1px solid var(--border-2);
+  border-radius:6px;overflow:hidden;
+  box-shadow:
+    0 40px 100px rgba(0,0,0,0.7),
+    0 0 80px rgba(249,115,22,0.06),
+    inset 0 1px 0 rgba(249,115,22,0.07);
 }
 .terminal-bar{
-  display:flex;align-items:center;gap:8px;
-  padding:12px 16px;background:var(--bg-3);
+  display:flex;align-items:center;gap:10px;
+  padding:13px 18px;background:var(--bg-3);
   border-bottom:1px solid var(--border);
 }
-.terminal-dots{display:flex;gap:6px;}
+.terminal-dots{display:flex;gap:7px;}
 .terminal-dot{width:11px;height:11px;border-radius:50%;}
 .terminal-title{
-  font-family:var(--mono);font-size:0.7rem;
-  color:var(--text-3);margin:0 auto;letter-spacing:0.5px;
+  font-family:var(--display);font-size:0.52rem;
+  color:var(--text-4);margin:0 auto;
+  letter-spacing:4px;text-transform:uppercase;
 }
-.terminal-body{padding:24px;font-family:var(--mono);font-size:0.82rem;line-height:2;}
-.t-comment{color:#4a4a6a;}
-.t-prompt{color:var(--accent-2);}
+.terminal-body{
+  padding:30px 32px;font-family:var(--mono);
+  font-size:0.78rem;line-height:2.2;
+}
+.t-comment{color:#2e1e30;}
+.t-prompt{color:var(--fire);}
 .t-cmd{color:var(--text);}
-.t-output{color:var(--text-2);}
-.t-success{color:var(--green);}
-.t-url{color:var(--cyan);}
-.t-blank{height:8px;}
+.t-success{
+  color:var(--gold);
+  text-shadow:0 0 8px rgba(245,158,11,0.3);
+}
+.t-blank{height:6px;}
 
-/* -- CTA SECTION -- */
+/* ═══ CTA ═══ */
 #cta{
-  padding:100px 24px;
-  text-align:center;
+  padding:140px 24px;text-align:center;
   position:relative;overflow:hidden;
 }
 #cta::before{
   content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 50% 50%,rgba(99,102,241,0.08) 0%,transparent 65%);
+  background:radial-gradient(ellipse 80% 60% at 50% 50%,rgba(180,30,20,0.1) 0%,transparent 65%);
   pointer-events:none;
 }
+.cta-eyebrow{
+  font-family:var(--display);font-size:0.54rem;letter-spacing:7px;
+  text-transform:uppercase;color:var(--gold-2);margin-bottom:40px;
+  opacity:0.7;
+}
 .cta-title{
-  font-family:var(--display);
-  font-size:clamp(2rem,4vw,3.2rem);
-  font-weight:800;letter-spacing:-1.5px;
-  color:var(--text);margin-bottom:16px;line-height:1.1;
+  font-family:var(--display-d);
+  font-size:clamp(2.4rem,6vw,5rem);
+  font-weight:900;letter-spacing:5px;text-transform:uppercase;
+  color:var(--text);margin-bottom:20px;line-height:1.05;
+}
+.cta-title span{
+  background:linear-gradient(135deg,var(--crimson),var(--fire),var(--gold));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 20px rgba(249,115,22,0.25));
 }
 .cta-desc{
-  font-size:0.93rem;color:var(--text-2);
-  max-width:420px;margin:0 auto 36px;line-height:1.75;
+  font-size:1.1rem;color:var(--text-2);font-style:italic;font-weight:300;
+  max-width:400px;margin:0 auto 48px;line-height:1.9;
 }
-.cta-actions{
-  display:flex;justify-content:center;gap:12px;flex-wrap:wrap;
-}
+.cta-actions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;}
 
-/* -- FOOTER -- */
+/* ═══ FOOTER ═══ */
 footer{
-  padding:32px 24px;
+  padding:44px 40px;
   border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:16px;
-  position:relative;z-index:1;
+  flex-wrap:wrap;gap:16px;position:relative;z-index:2;
+  background:var(--bg);
+}
+footer::before{
+  content:'';position:absolute;top:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(249,115,22,0.25) 30%,rgba(245,158,11,0.35) 50%,rgba(249,115,22,0.25) 70%,transparent);
 }
 .footer-brand{
-  font-family:var(--mono);font-size:0.75rem;
-  color:var(--text-3);display:flex;align-items:center;gap:12px;
+  font-family:var(--display);font-size:0.54rem;letter-spacing:2.5px;
+  text-transform:uppercase;color:var(--text-4);
+  display:flex;align-items:center;gap:14px;
 }
 .footer-sep{color:var(--border-2);}
-.footer-links{
-  display:flex;gap:20px;
-  list-style:none;
-}
+.footer-links{display:flex;gap:28px;list-style:none;}
 .footer-links a{
-  font-family:var(--mono);font-size:0.72rem;
-  color:var(--text-3);text-decoration:none;
-  transition:color 0.2s;letter-spacing:0.3px;
+  font-family:var(--display);font-size:0.52rem;letter-spacing:2.5px;
+  text-transform:uppercase;color:var(--text-4);text-decoration:none;
+  transition:color 0.2s;
 }
-.footer-links a:hover{color:var(--accent-2);}
+.footer-links a:hover{color:var(--ember);}
 
-/* -- FADE IN -- */
-.fade-up{
-  opacity:0;transform:translateY(24px);
-  transition:opacity 0.6s ease,transform 0.6s ease;
-}
+/* ═══ FADE UP ═══ */
+.fade-up{opacity:0;transform:translateY(32px);transition:opacity 0.75s ease,transform 0.75s ease;}
 .fade-up.visible{opacity:1;transform:translateY(0);}
 
-/* -- RESPONSIVE -- */
+/* ═══ RESPONSIVE ═══ */
 @media(max-width:768px){
   .features-grid{grid-template-columns:1fr;}
   .modules-grid{grid-template-columns:repeat(2,1fr);}
@@ -602,67 +685,103 @@ footer{
   .stat-row{grid-template-columns:repeat(2,1fr);}
   .chart-row{grid-template-columns:1fr;}
   nav .nav-links{display:none;}
+  nav{padding:0 20px;}
+  footer{padding:32px 20px;}
 }
 @media(max-width:480px){
-  .modules-grid{grid-template-columns:1fr 1fr;}
   .hero-metrics{flex-direction:column;}
   .metric{border-right:none;border-bottom:1px solid var(--border);}
   .metric:last-child{border-bottom:none;}
+  .modules-grid{grid-template-columns:1fr 1fr;}
 }
 </style>
 </head>
 <body>
 
-<div class="spotlight"></div>
-<div class="spotlight-2"></div>
+<!-- ATMOSPHERE -->
+<div class="atmo atmo-radials"></div>
+<div class="atmo atmo-grain"></div>
+<div class="atmo atmo-vignette"></div>
+
+<!-- EMBERS -->
+<div class="ember-field" id="embers"></div>
 
 <!-- NAV -->
 <nav>
   <a href="#" class="nav-logo">
-    <div class="nav-logo-mark">PX</div>
-    Phoenix 2.0
+    <div class="nav-logo-emblem">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="fg" cx="50%" cy="0%" r="100%">
+            <stop offset="0%" stop-color="#fcd34d"/>
+            <stop offset="40%" stop-color="#f97316"/>
+            <stop offset="100%" stop-color="#991b1b"/>
+          </radialGradient>
+        </defs>
+        <!-- Stylized flame shape -->
+        <path d="M18 34 C10 28 6 22 7 16 C8 10 12 8 13 6 C14 10 12 13 14 15 C15 10 17 7 18 2 C19 7 21 10 22 15 C24 13 22 10 23 6 C24 8 28 10 29 16 C30 22 26 28 18 34Z" fill="url(#fg)"/>
+        <!-- Wing hints -->
+        <path d="M9 18 C5 16 3 19 4 22" stroke="url(#fg)" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+        <path d="M27 18 C31 16 33 19 32 22" stroke="url(#fg)" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+      </svg>
+    </div>
+    Phoenix
   </a>
   <ul class="nav-links">
-    <li><a href="#features">Features</a></li>
-    <li><a href="#modules">Modulos</a></li>
-    <li><a href="#stack">Stack</a></li>
-    <li><a href="#install">Instalacao</a></li>
+    <li><a href="#features">Virtudes</a></li>
+    <li><a href="#modules">Módulos</a></li>
+    <li><a href="#stack">Forja</a></li>
+    <li><a href="#install">Invocar</a></li>
   </ul>
-  <a href="https://github.com/Thiago-code-lab/projeto-phoenix" target="_blank" class="nav-cta">Ver no GitHub</a>
+  <a href="https://github.com/Thiago-code-lab/projeto-phoenix" target="_blank" class="nav-cta">GitHub</a>
 </nav>
 
 <!-- HERO -->
 <section id="hero">
-  <div class="hero-badge">
-    <span class="hero-badge-dot"></span>
-    v2.0 · Desktop · Local-first · Sem servidor
+  <!-- Large translucent phoenix flame behind title -->
+  <svg class="hero-flame-bg" viewBox="0 0 600 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="hfg" cx="50%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#f59e0b"/>
+        <stop offset="40%" stop-color="#f97316"/>
+        <stop offset="100%" stop-color="#991b1b"/>
+      </radialGradient>
+    </defs>
+    <!-- Central flame body -->
+    <path d="M300 680 C200 600 120 500 130 380 C140 260 200 200 220 120 C235 200 210 260 240 300 C250 200 270 140 300 20 C330 140 350 200 360 300 C390 260 365 200 380 120 C400 200 460 260 470 380 C480 500 400 600 300 680Z" fill="url(#hfg)" opacity="0.9"/>
+    <!-- Wing left -->
+    <path d="M200 350 C120 300 60 340 80 420 C60 340 20 320 10 380 C30 300 80 260 160 300 Z" fill="url(#hfg)" opacity="0.6"/>
+    <!-- Wing right -->
+    <path d="M400 350 C480 300 540 340 520 420 C540 340 580 320 590 380 C570 300 520 260 440 300 Z" fill="url(#hfg)" opacity="0.6"/>
+    <!-- Tail feathers -->
+    <path d="M270 620 C250 700 230 740 210 720 C240 700 260 660 270 620Z" fill="url(#hfg)" opacity="0.5"/>
+    <path d="M300 660 C300 740 300 780 290 760 C300 740 300 700 300 660Z" fill="url(#hfg)" opacity="0.5"/>
+    <path d="M330 620 C350 700 370 740 390 720 C360 700 340 660 330 620Z" fill="url(#hfg)" opacity="0.5"/>
+  </svg>
+
+  <div class="hero-eyebrow">
+    <span class="hero-eyebrow-line"></span>
+    Personal Life OS · v2.0 · Local-first · Open Source
+    <span class="hero-eyebrow-line r"></span>
   </div>
-
-  <h1 class="hero-title">
-    Seu sistema<br>
-    operacional <span>pessoal</span>
-  </h1>
-  <p class="hero-sub">Organize tudo. Em um lugar. Offline.</p>
-  <p class="hero-desc">
-    Phoenix 2.0 e uma aplicacao desktop all-in-one construida com PyQt6 e SQLite.
-    12 modulos integrados para gerenciar cada aspecto da sua vida - sem nuvem, sem assinatura, sem limites.
+  <h1 class="hero-title">Phoenix</h1>
+  <div class="hero-version">Versão II &ensp;·&ensp; Renasça do Zero</div>
+  <div class="hero-rule"></div>
+  <p class="hero-subtitle">
+    Uma aplicação desktop que <em>não morre</em> quando o servidor cai.<br>
+    <strong>Seus dados. Sua máquina. Para sempre.</strong>
   </p>
-
   <div class="hero-actions">
     <a href="https://github.com/Thiago-code-lab/projeto-phoenix" target="_blank" class="btn-primary">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-      Clonar repositorio
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      Clonar Repositório
     </a>
-    <a href="#install" class="btn-secondary">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-      Como instalar
-    </a>
+    <a href="#install" class="btn-secondary">Como Invocar</a>
   </div>
-
   <div class="hero-metrics">
     <div class="metric">
       <div class="metric-val">12</div>
-      <div class="metric-label">Modulos</div>
+      <div class="metric-label">Módulos</div>
     </div>
     <div class="metric">
       <div class="metric-val">100%</div>
@@ -680,124 +799,90 @@ footer{
 </section>
 
 <!-- APP MOCKUP -->
-<div class="app-mockup-wrap fade-up">
-  <div class="app-window">
-    <div class="app-titlebar">
-      <div class="traffic-lights">
-        <div class="tl tl-red"></div>
-        <div class="tl tl-yellow"></div>
-        <div class="tl tl-green"></div>
+<div class="z1" style="max-width:980px;margin:0 auto;padding:0 24px 0;">
+  <div class="app-mockup-wrap fade-up" style="padding:0;">
+    <div class="app-window">
+      <div class="app-titlebar">
+        <div class="traffic-lights">
+          <div class="tl tl-red"></div>
+          <div class="tl tl-yellow"></div>
+          <div class="tl tl-green"></div>
+        </div>
+        <div class="app-title">Phoenix · Dashboard</div>
       </div>
-      <div class="app-title">Phoenix - Dashboard</div>
-    </div>
-    <div class="app-body">
-      <div class="app-sidebar">
-        <div class="app-sidebar-logo">
-          <div class="app-sidebar-logo-mark"></div>
-          Phoenix
-        </div>
-        <div class="sidebar-section">Principal</div>
-        <div class="sidebar-item active">
-          <div class="sidebar-dot" style="background:var(--accent)"></div>
-          Dashboard
-        </div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:var(--green)"></div>
-          Metas
-        </div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:var(--cyan)"></div>
-          Habitos
-        </div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:var(--amber)"></div>
-          Financas
-        </div>
-        <div class="sidebar-section">Vida</div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:#a78bfa"></div>
-          Diario
-        </div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:#f472b6"></div>
-          Saude
-        </div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:#34d399"></div>
-          Biblioteca
-        </div>
-        <div class="sidebar-section">Trabalho</div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:#60a5fa"></div>
-          Projetos
-        </div>
-        <div class="sidebar-item">
-          <div class="sidebar-dot" style="background:#fb923c"></div>
-          Foco
-        </div>
-      </div>
-      <div class="app-content">
-        <div class="content-header">
-          <div class="content-title">Dashboard</div>
-          <div class="content-badge">Hoje · 09 Mar 2026</div>
-        </div>
-        <div class="stat-row">
-          <div class="stat-card">
-            <div class="stat-card-val">7</div>
-            <div class="stat-card-label">Metas ativas</div>
-            <div class="stat-card-delta">+2 este mes</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-val">R$4.2k</div>
-            <div class="stat-card-label">Saldo total</div>
-            <div class="stat-card-delta">+12% vs mes ant.</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-val">18d</div>
-            <div class="stat-card-label">Melhor streak</div>
-            <div class="stat-card-delta" style="color:var(--amber)">Exercicio</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-val">6h</div>
-            <div class="stat-card-label">Foco esta semana</div>
-            <div class="stat-card-delta">8 sessoes</div>
-          </div>
-        </div>
-        <div class="chart-row">
-          <div class="chart-card">
-            <div class="chart-card-label">FINANCAS - ULTIMOS 6 MESES</div>
-            <div class="bar-chart">
-              <div class="bar" style="height:45%;background:linear-gradient(180deg,var(--green),rgba(16,185,129,0.3))"></div>
-              <div class="bar" style="height:60%"></div>
-              <div class="bar" style="height:38%;background:linear-gradient(180deg,var(--green),rgba(16,185,129,0.3))"></div>
-              <div class="bar" style="height:72%"></div>
-              <div class="bar" style="height:55%;background:linear-gradient(180deg,var(--green),rgba(16,185,129,0.3))"></div>
-              <div class="bar" style="height:80%"></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="app-sidebar-logo">
+            <div class="app-sidebar-flame">
+              <svg width="18" height="22" viewBox="0 0 18 22" fill="none">
+                <defs><linearGradient id="sfg" x1="50%" y1="0%" x2="50%" y2="100%">
+                  <stop offset="0%" stop-color="#fcd34d"/><stop offset="50%" stop-color="#f97316"/><stop offset="100%" stop-color="#991b1b"/>
+                </linearGradient></defs>
+                <path d="M9 21 C5 17 3 13 3.5 9.5 C4 6 6 4.5 6.5 2.5 C7 5 6 7 7.5 8.5 C8 5 8.5 3 9 0.5 C9.5 3 10 5 10.5 8.5 C12 7 11 5 11.5 2.5 C12 4.5 14 6 14.5 9.5 C15 13 13 17 9 21Z" fill="url(#sfg)"/>
+              </svg>
             </div>
+            Phoenix
           </div>
-          <div class="chart-card">
-            <div class="chart-card-label">METAS - PROGRESSO</div>
-            <div class="progress-list">
-              <div class="progress-item">
-                <div class="progress-header"><span>SAA-C03</span><span style="color:var(--accent-2)">68%</span></div>
-                <div class="progress-track"><div class="progress-fill" style="width:68%"></div></div>
+          <div class="sidebar-section">Principal</div>
+          <div class="sidebar-item active"><div class="sidebar-dot" style="background:var(--fire)"></div>Dashboard</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:var(--gold)"></div>Metas</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:var(--ember)"></div>Habitos</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:#34d399"></div>Financas</div>
+          <div class="sidebar-section">Vida</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:#a78bfa"></div>Diario</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:#f472b6"></div>Saude</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:#60a5fa"></div>Biblioteca</div>
+          <div class="sidebar-section">Trabalho</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:var(--crimson)"></div>Projetos</div>
+          <div class="sidebar-item"><div class="sidebar-dot" style="background:#fb923c"></div>Foco</div>
+        </div>
+        <div class="app-content">
+          <div class="content-header">
+            <div class="content-title">Dashboard</div>
+            <div class="content-badge">Hoje · 09 Mar 2026</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card"><div class="stat-card-val">7</div><div class="stat-card-label">Metas ativas</div><div class="stat-card-delta">+2 este mês</div></div>
+            <div class="stat-card"><div class="stat-card-val">R$4.2k</div><div class="stat-card-label">Saldo total</div><div class="stat-card-delta">+12% vs ant.</div></div>
+            <div class="stat-card"><div class="stat-card-val">18d</div><div class="stat-card-label">Melhor streak</div><div class="stat-card-delta" style="color:var(--ember)">Exercício</div></div>
+            <div class="stat-card"><div class="stat-card-val">6h</div><div class="stat-card-label">Foco semanal</div><div class="stat-card-delta">8 sessões</div></div>
+          </div>
+          <div class="chart-row">
+            <div class="chart-card">
+              <div class="chart-card-label">Finanças — Últimos 6 Meses</div>
+              <div class="bar-chart">
+                <div class="bar" style="height:45%"></div>
+                <div class="bar" style="height:60%"></div>
+                <div class="bar" style="height:38%"></div>
+                <div class="bar" style="height:72%"></div>
+                <div class="bar" style="height:55%"></div>
+                <div class="bar" style="height:80%"></div>
               </div>
-              <div class="progress-item">
-                <div class="progress-header"><span>Ingles B2</span><span style="color:var(--cyan)">45%</span></div>
-                <div class="progress-track"><div class="progress-fill" style="width:45%;background:linear-gradient(90deg,var(--cyan),var(--accent))"></div></div>
-              </div>
-              <div class="progress-item">
-                <div class="progress-header"><span>Exercicio</span><span style="color:var(--green)">91%</span></div>
-                <div class="progress-track"><div class="progress-fill" style="width:91%;background:linear-gradient(90deg,var(--green),var(--cyan))"></div></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-label">Metas — Progresso</div>
+              <div class="progress-list">
+                <div>
+                  <div class="progress-header"><span>SAA-C03</span><span style="color:var(--ember)">68%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:68%"></div></div>
+                </div>
+                <div>
+                  <div class="progress-header"><span>Inglês B2</span><span style="color:var(--gold)">45%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:45%"></div></div>
+                </div>
+                <div>
+                  <div class="progress-header"><span>Exercício</span><span style="color:var(--gold-2)">91%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:91%"></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <div style="font-family:var(--mono);font-size:0.62rem;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">HABITOS DE HOJE</div>
-          <div class="habit-row"><div class="habit-check done"></div><div class="habit-name">Leitura 30min</div><div class="habit-streak">21d</div></div>
-          <div class="habit-row"><div class="habit-check done"></div><div class="habit-name">Exercicio</div><div class="habit-streak">18d</div></div>
-          <div class="habit-row"><div class="habit-check"></div><div class="habit-name">Meditacao</div><div class="habit-streak">5d</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="font-family:var(--display);font-size:0.46rem;color:var(--text-4);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;">Hábitos de Hoje</div>
+            <div class="habit-row"><div class="habit-check done"></div><div class="habit-name">Leitura 30min</div><div class="habit-streak">21d 🔥</div></div>
+            <div class="habit-row"><div class="habit-check done"></div><div class="habit-name">Exercício</div><div class="habit-streak">18d 🔥</div></div>
+            <div class="habit-row"><div class="habit-check"></div><div class="habit-name">Meditação</div><div class="habit-streak">5d</div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -805,59 +890,47 @@ footer{
 </div>
 
 <!-- FEATURES -->
-<section id="features">
-  <div class="section-label">Por que Phoenix</div>
-  <h2 class="section-title fade-up">Construido para durar.<br>Construido para voce.</h2>
-  <p class="section-desc fade-up">Sem assinatura mensal. Sem dados na nuvem. Sem dependencia de internet. Apenas sua vida, organizada do jeito certo.</p>
-
+<section id="features" style="padding-top:120px;">
+  <div class="ornament"><div class="ornament-line"></div><div class="ornament-glyph">✦ ✦ ✦</div><div class="ornament-line r"></div></div>
+  <div class="section-eyebrow">Por que Phoenix</div>
+  <h2 class="section-title fade-up">Forjado para <span>Durar</span></h2>
+  <p class="section-desc fade-up">Assim como a fênix renasce das cinzas mais forte, este sistema sobrevive a tudo — cortes de internet, servidores caídos, assinaturas canceladas. Seus dados existem enquanto existir seu HD.</p>
   <div class="features-grid">
     <div class="feature-card fade-up">
-      <div class="feature-icon">
-        <svg width="16" height="16" fill="none" stroke="var(--accent-2)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </div>
+      <span class="feature-num">I</span>
       <div class="feature-name">100% Local-first</div>
-      <div class="feature-desc">Todos os dados ficam no seu computador em um arquivo SQLite. Nenhum byte sai da sua maquina sem sua permissao.</div>
-      <div class="feature-tag">phoenix.db - SQLite</div>
+      <div class="feature-desc">Todos os dados ficam no seu computador em um arquivo SQLite. Nenhum byte sai da sua máquina sem sua permissão.</div>
+      <div class="feature-tag">phoenix.db · SQLite</div>
     </div>
     <div class="feature-card fade-up">
-      <div class="feature-icon">
-        <svg width="16" height="16" fill="none" stroke="var(--cyan)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      </div>
-      <div class="feature-name">Interface nativa</div>
-      <div class="feature-desc">PyQt6 puro, sem Electron, sem browser embutido. Desempenho nativo, atalhos de teclado reais e visual que respeita o SO.</div>
-      <div class="feature-tag">PyQt6 - QSS Dark/Light</div>
+      <span class="feature-num">II</span>
+      <div class="feature-name">Interface Nativa</div>
+      <div class="feature-desc">PyQt6 puro, sem Electron, sem browser embutido. Desempenho nativo e visual que respeita o sistema operacional.</div>
+      <div class="feature-tag">PyQt6 · QSS Dark/Light</div>
     </div>
     <div class="feature-card fade-up">
-      <div class="feature-icon">
-        <svg width="16" height="16" fill="none" stroke="var(--green)" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      </div>
-      <div class="feature-name">Dados reais, graficos reais</div>
-      <div class="feature-desc">PyQtGraph para series temporais em tempo real e Matplotlib embeddado para visualizacoes estaticas. Nao e mock.</div>
-      <div class="feature-tag">PyQtGraph - Matplotlib</div>
+      <span class="feature-num">III</span>
+      <div class="feature-name">Dados Reais</div>
+      <div class="feature-desc">PyQtGraph para séries temporais em tempo real e Matplotlib embeddado para visualizações estáticas. Não é mock.</div>
+      <div class="feature-tag">PyQtGraph · Matplotlib</div>
     </div>
     <div class="feature-card fade-up">
-      <div class="feature-icon">
-        <svg width="16" height="16" fill="none" stroke="var(--amber)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      </div>
-      <div class="feature-name">Backup e exportacao</div>
-      <div class="feature-desc">Exporta extrato financeiro em PDF via ReportLab, importa CSV e faz backup criptografado do banco inteiro em um arquivo.</div>
-      <div class="feature-tag">ReportLab - Cryptography</div>
+      <span class="feature-num">IV</span>
+      <div class="feature-name">Backup & Exportação</div>
+      <div class="feature-desc">Extrato financeiro em PDF via ReportLab, importação CSV e backup criptografado do banco inteiro em um arquivo.</div>
+      <div class="feature-tag">ReportLab · Cryptography</div>
     </div>
     <div class="feature-card fade-up">
-      <div class="feature-icon">
-        <svg width="16" height="16" fill="none" stroke="#a78bfa" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </div>
-      <div class="feature-name">Pomodoro nativo</div>
-      <div class="feature-desc">Timer circular desenhado com QPainter, notificacao nativa ao completar, historico de sessoes e estatisticas semanais.</div>
-      <div class="feature-tag">QPainter - QSoundEffect</div>
+      <span class="feature-num">V</span>
+      <div class="feature-name">Pomodoro Nativo</div>
+      <div class="feature-desc">Timer circular desenhado com QPainter, notificação nativa, histórico de sessões e estatísticas semanais integradas.</div>
+      <div class="feature-tag">QPainter · QSoundEffect</div>
     </div>
     <div class="feature-card fade-up">
-      <div class="feature-icon">
-        <svg width="16" height="16" fill="none" stroke="#f472b6" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>
-      </div>
-      <div class="feature-name">Kanban com drag and drop</div>
-      <div class="feature-desc">Drag and drop nativo Qt com QDrag e QDropEvent. Nenhum workaround de selecao - arrastar de verdade entre colunas.</div>
-      <div class="feature-tag">QDrag - QDropEvent</div>
+      <span class="feature-num">VI</span>
+      <div class="feature-name">Kanban Drag & Drop</div>
+      <div class="feature-desc">Drag and drop nativo Qt com QDrag e QDropEvent. Nenhum workaround — arrastar de verdade entre colunas.</div>
+      <div class="feature-tag">QDrag · QDropEvent</div>
     </div>
   </div>
 </section>
@@ -865,83 +938,23 @@ footer{
 <!-- MODULES -->
 <section id="modules">
   <div class="modules-wrap">
-    <div class="section-label">Modulos</div>
-    <h2 class="section-title fade-up">12 modulos.<br>Uma unica aplicacao.</h2>
-    <p class="section-desc fade-up">Cada modulo e independente, tem seu proprio Controller, Repository e View. Modulos novos nao quebram os existentes.</p>
-
+    <div class="ornament"><div class="ornament-line"></div><div class="ornament-glyph">✦ ✦ ✦</div><div class="ornament-line r"></div></div>
+    <div class="section-eyebrow">Módulos</div>
+    <h2 class="section-title fade-up">12 Chamas.<br><span>Uma Única Fogueira.</span></h2>
+    <p class="section-desc fade-up">Cada módulo é independente — próprio Controller, Repository e View. Módulos novos nunca quebram os existentes.</p>
     <div class="modules-grid">
-      <div class="module-card fade-up">
-        <span class="module-icon">◈</span>
-        <div class="module-name">Dashboard</div>
-        <div class="module-desc">Visao geral em tempo real de todos os modulos.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◎</span>
-        <div class="module-name">Metas</div>
-        <div class="module-desc">Metas com milestones, progresso e deadline.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">▣</span>
-        <div class="module-name">Habitos</div>
-        <div class="module-desc">Heatmap estilo GitHub e streaks automaticos.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◆</span>
-        <div class="module-name">Financas</div>
-        <div class="module-desc">Transacoes, orcamentos, graficos e exportacao PDF.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">▦</span>
-        <div class="module-name">Projetos</div>
-        <div class="module-desc">Kanban com drag and drop nativo entre colunas.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◐</span>
-        <div class="module-name">Diario</div>
-        <div class="module-desc">Editor rich text com auto-save e calendario de entradas.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◑</span>
-        <div class="module-name">Saude</div>
-        <div class="module-desc">Peso, sono, humor, agua e treinos com series temporais.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◧</span>
-        <div class="module-name">Biblioteca</div>
-        <div class="module-desc">Controle de leituras, progresso e avaliacao por estrelas.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◉</span>
-        <div class="module-name">Foco</div>
-        <div class="module-desc">Pomodoro com timer circular QPainter e historico.</div>
-        <span class="module-badge badge-new">Novo</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◫</span>
-        <div class="module-name">Notas</div>
-        <div class="module-desc">Base de conhecimento hierarquica com backlinks.</div>
-        <span class="module-badge badge-new">Novo</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◈</span>
-        <div class="module-name">Revisoes</div>
-        <div class="module-desc">Revisoes semanais e radar de vida com 8 dimensoes.</div>
-        <span class="module-badge badge-new">Novo</span>
-      </div>
-      <div class="module-card fade-up">
-        <span class="module-icon">◬</span>
-        <div class="module-name">Configuracoes</div>
-        <div class="module-desc">Perfil, tema dark/light, backup e exportacao de dados.</div>
-        <span class="module-badge badge-core">Core</span>
-      </div>
+      <div class="module-card fade-up"><span class="module-roman">I</span><div class="module-name">Dashboard</div><div class="module-desc">Visão geral em tempo real de todos os módulos.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">II</span><div class="module-name">Metas</div><div class="module-desc">Metas com milestones, progresso e deadline.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">III</span><div class="module-name">Hábitos</div><div class="module-desc">Heatmap estilo GitHub e streaks automáticos.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">IV</span><div class="module-name">Finanças</div><div class="module-desc">Transações, orçamentos, gráficos e PDF.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">V</span><div class="module-name">Projetos</div><div class="module-desc">Kanban com drag and drop nativo Qt.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">VI</span><div class="module-name">Diário</div><div class="module-desc">Editor rich text com auto-save e calendário.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">VII</span><div class="module-name">Saúde</div><div class="module-desc">Peso, sono, humor, água e treinos.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">VIII</span><div class="module-name">Biblioteca</div><div class="module-desc">Controle de leituras e avaliação por estrelas.</div><span class="module-badge badge-core">Core</span></div>
+      <div class="module-card fade-up"><span class="module-roman">IX</span><div class="module-name">Foco</div><div class="module-desc">Pomodoro com timer circular QPainter.</div><span class="module-badge badge-new">Novo</span></div>
+      <div class="module-card fade-up"><span class="module-roman">X</span><div class="module-name">Notas</div><div class="module-desc">Base de conhecimento com backlinks.</div><span class="module-badge badge-new">Novo</span></div>
+      <div class="module-card fade-up"><span class="module-roman">XI</span><div class="module-name">Revisões</div><div class="module-desc">Revisões semanais e radar de vida 8D.</div><span class="module-badge badge-new">Novo</span></div>
+      <div class="module-card fade-up"><span class="module-roman">XII</span><div class="module-name">Configs</div><div class="module-desc">Perfil, tema dark/light, backup e exportação.</div><span class="module-badge badge-core">Core</span></div>
     </div>
   </div>
 </section>
@@ -949,73 +962,49 @@ footer{
 <!-- STACK -->
 <section id="stack">
   <div class="stack-wrap">
-    <div class="section-label">Stack</div>
-    <h2 class="section-title fade-up">Bibliotecas Python.<br>Nada mais.</h2>
-    <p class="section-desc fade-up">Sem Electron. Sem Node. Sem Docker. Sem servidor. Apenas Python e suas bibliotecas.</p>
-
+    <div class="ornament"><div class="ornament-line"></div><div class="ornament-glyph">✦ ✦ ✦</div><div class="ornament-line r"></div></div>
+    <div class="section-eyebrow">A Forja</div>
+    <h2 class="section-title fade-up">Bibliotecas Python.<br><span>Nada Mais.</span></h2>
+    <p class="section-desc fade-up">Sem Electron. Sem Node. Sem Docker. Sem servidor. Apenas Python e suas bibliotecas — o suficiente para fazer o extraordinário.</p>
     <div class="stack-grid">
       <div class="stack-item fade-up">
         <div class="stack-item-icon">Qt6</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">PyQt6</div>
-          <div class="stack-item-desc">Interface desktop nativa, QSS theming, drag & drop, QPainter</div>
-        </div>
-        <div class="stack-item-tag">>= 6.6.0</div>
+        <div><div class="stack-item-name">PyQt6</div><div class="stack-item-desc">Interface desktop nativa, QSS theming, drag & drop, QPainter</div></div>
+        <div class="stack-item-tag">>= 6.6</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">ORM</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">SQLAlchemy + SQLite</div>
-          <div class="stack-item-desc">ORM completo, banco local, migrations automaticas na inicializacao</div>
-        </div>
+        <div><div class="stack-item-name">SQLAlchemy + SQLite</div><div class="stack-item-desc">ORM completo, banco local, migrations automáticas</div></div>
         <div class="stack-item-tag">>= 2.0</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">PLT</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">Matplotlib</div>
-          <div class="stack-item-desc">Graficos estaticos embeddados via FigureCanvas no Qt</div>
-        </div>
+        <div><div class="stack-item-name">Matplotlib</div><div class="stack-item-desc">Gráficos estáticos embeddados via FigureCanvas no Qt</div></div>
         <div class="stack-item-tag">>= 3.8</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">PQG</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">PyQtGraph</div>
-          <div class="stack-item-desc">Series temporais em tempo real, nativo Qt, alta performance</div>
-        </div>
+        <div><div class="stack-item-name">PyQtGraph</div><div class="stack-item-desc">Séries temporais em tempo real, nativo Qt</div></div>
         <div class="stack-item-tag">>= 0.13</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">PD</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">Pandas + NumPy</div>
-          <div class="stack-item-desc">Processamento de dados, estatisticas, importacao CSV</div>
-        </div>
+        <div><div class="stack-item-name">Pandas + NumPy</div><div class="stack-item-desc">Processamento de dados, estatísticas, importação CSV</div></div>
         <div class="stack-item-tag">>= 2.1</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">PDF</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">ReportLab</div>
-          <div class="stack-item-desc">Exportacao de extratos financeiros e relatorios em PDF</div>
-        </div>
+        <div><div class="stack-item-name">ReportLab</div><div class="stack-item-desc">Exportação de extratos financeiros em PDF</div></div>
         <div class="stack-item-tag">>= 4.1</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">ICO</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">qtawesome</div>
-          <div class="stack-item-desc">Icones Font Awesome via Qt - sem PNG, sem emoji</div>
-        </div>
+        <div><div class="stack-item-name">qtawesome</div><div class="stack-item-desc">Ícones Font Awesome via Qt — sem PNG, sem emoji</div></div>
         <div class="stack-item-tag">>= 1.3</div>
       </div>
       <div class="stack-item fade-up">
         <div class="stack-item-icon">CFG</div>
-        <div class="stack-item-info">
-          <div class="stack-item-name">dynaconf</div>
-          <div class="stack-item-desc">Configuracoes do usuario em settings.toml local editavel</div>
-        </div>
+        <div><div class="stack-item-name">dynaconf</div><div class="stack-item-desc">Configurações em settings.toml local editável</div></div>
         <div class="stack-item-tag">>= 3.2</div>
       </div>
     </div>
@@ -1024,34 +1013,34 @@ footer{
 
 <!-- INSTALL -->
 <section id="install">
-  <div class="section-label">Instalacao</div>
-  <h2 class="section-title fade-up">Tres comandos.<br>Pronto.</h2>
-  <p class="section-desc fade-up">Nenhuma conta necessaria. Nenhum servidor para configurar. Funciona no Windows, macOS e Linux.</p>
-
+  <div class="ornament"><div class="ornament-line"></div><div class="ornament-glyph">✦ ✦ ✦</div><div class="ornament-line r"></div></div>
+  <div class="section-eyebrow">Invocação</div>
+  <h2 class="section-title fade-up">Três Comandos.<br><span>A Fênix Desperta.</span></h2>
+  <p class="section-desc fade-up">Nenhuma conta necessária. Nenhum servidor para configurar. Funciona em Windows, macOS e Linux.</p>
   <div class="terminal-wrap fade-up">
     <div class="terminal">
       <div class="terminal-bar">
         <div class="terminal-dots">
-          <div class="terminal-dot" style="background:var(--red)"></div>
-          <div class="terminal-dot" style="background:var(--amber)"></div>
-          <div class="terminal-dot" style="background:var(--green)"></div>
+          <div class="terminal-dot" style="background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.4)"></div>
+          <div class="terminal-dot" style="background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.4)"></div>
+          <div class="terminal-dot" style="background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.4)"></div>
         </div>
-        <div class="terminal-title">bash - phoenix</div>
+        <div class="terminal-title">bash · phoenix</div>
       </div>
       <div class="terminal-body">
-        <div><span class="t-comment"># 1. clonar o repositorio</span></div>
+        <div><span class="t-comment"># I · clonar o repositório</span></div>
         <div><span class="t-prompt">$ </span><span class="t-cmd">git clone https://github.com/Thiago-code-lab/projeto-phoenix</span></div>
         <div><span class="t-prompt">$ </span><span class="t-cmd">cd projeto-phoenix</span></div>
         <div class="t-blank"></div>
-        <div><span class="t-comment"># 2. criar ambiente virtual e instalar dependencias</span></div>
+        <div><span class="t-comment"># II · criar ambiente e instalar</span></div>
         <div><span class="t-prompt">$ </span><span class="t-cmd">python -m venv .venv && source .venv/bin/activate</span></div>
         <div><span class="t-prompt">$ </span><span class="t-cmd">pip install -r requirements.txt</span></div>
         <div class="t-blank"></div>
-        <div><span class="t-comment"># 3. rodar a aplicacao</span></div>
+        <div><span class="t-comment"># III · despertar</span></div>
         <div><span class="t-prompt">$ </span><span class="t-cmd">python main.py</span></div>
         <div class="t-blank"></div>
-        <div><span class="t-success">✓ banco phoenix.db criado automaticamente</span></div>
-        <div><span class="t-success">✓ Phoenix 2.0 iniciado com sucesso</span></div>
+        <div><span class="t-success">✦ banco phoenix.db criado automaticamente</span></div>
+        <div><span class="t-success">✦ Phoenix 2.0 despertou com sucesso</span></div>
       </div>
     </div>
   </div>
@@ -1059,26 +1048,23 @@ footer{
 
 <!-- CTA -->
 <section id="cta">
-  <h2 class="cta-title fade-up">Comece hoje.<br>Para sempre seu.</h2>
-  <p class="cta-desc fade-up">Open source. Sem plano pago. Sem limite de uso. Fork, modifique, contribua.</p>
+  <div class="cta-eyebrow">Open Source · Gratuito · Para Sempre</div>
+  <h2 class="cta-title fade-up">Das Cinzas,<br><span>Renasce.</span></h2>
+  <p class="cta-desc fade-up">Fork. Modifique. Contribua. Sem plano pago. Sem limite de uso. Seu sistema, suas regras.</p>
   <div class="cta-actions fade-up">
     <a href="https://github.com/Thiago-code-lab/projeto-phoenix" target="_blank" class="btn-primary">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
       Ver no GitHub
     </a>
-    <a href="https://thiago-code-lab.github.io/" target="_blank" class="btn-secondary">
-      Ver portfolio completo
-    </a>
+    <a href="https://thiago-code-lab.github.io/" target="_blank" class="btn-secondary">Portfolio Completo</a>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
   <div class="footer-brand">
-    <span>Phoenix 2.0</span>
-    <span class="footer-sep">·</span>
-    <span>PyQt6 + SQLite</span>
-    <span class="footer-sep">·</span>
+    <span>Phoenix 2.0</span><span class="footer-sep">·</span>
+    <span>PyQt6 + SQLite</span><span class="footer-sep">·</span>
     <span>Local-first</span>
   </div>
   <ul class="footer-links">
@@ -1089,28 +1075,61 @@ footer{
 </footer>
 
 <script>
-// Fade-up observer
+// ═══ EMBER SYSTEM ═══
+const field = document.getElementById('embers');
+const EMBER_COLORS = ['#f97316','#fb923c','#f59e0b','#fcd34d','#dc2626','#fde68a'];
+
+function spawnEmber() {
+  const e = document.createElement('div');
+  e.className = 'ember';
+  const color = EMBER_COLORS[Math.floor(Math.random() * EMBER_COLORS.length)];
+  const size = 0.8 + Math.random() * 3;
+  const dur  = 5 + Math.random() * 7;
+  const delay = Math.random() * 2;
+  const startX = Math.random() * 100;
+  const dx = (Math.random() - 0.5) * 150;
+  e.style.cssText = `
+    left:${startX}%;bottom:${Math.random()*10}%;
+    width:${size}px;height:${size}px;
+    --dx:${dx}px;
+    animation-duration:${dur}s;
+    animation-delay:${delay}s;
+    background:${color};
+    box-shadow:0 0 ${size*2}px ${size*0.8}px ${color}66;
+  `;
+  field.appendChild(e);
+  setTimeout(() => e.remove(), (dur + delay) * 1000 + 200);
+}
+
+// Burst spawn initial embers then maintain
+for (let i = 0; i < 30; i++) setTimeout(spawnEmber, i * 100);
+setInterval(spawnEmber, 280);
+
+// ═══ FADE UP ═══
 const obs = new IntersectionObserver(entries => {
   entries.forEach(e => {
-    if(e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+    if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
   });
-}, {threshold:0.1});
+}, { threshold: 0.08 });
 document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
 
-// Bar chart animation
+// ═══ BAR CHART ═══
 const bars = document.querySelectorAll('.bar');
-const barObs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if(e.isIntersecting){
-      bars.forEach((b,i) => {
-        setTimeout(() => { b.style.opacity='1'; }, i*80);
-      });
-      barObs.disconnect();
-    }
-  });
-}, {threshold:0.5});
-const barChart = document.querySelector('.bar-chart');
-if(barChart) { bars.forEach(b => b.style.opacity='0'); barObs.observe(barChart); }
+const bc   = document.querySelector('.bar-chart');
+if (bc) {
+  bars.forEach(b => { b.style.opacity = '0'; b.style.transform = 'scaleY(0)'; b.style.transformOrigin = 'bottom'; b.style.transition = 'opacity 0.4s, transform 0.5s ease'; });
+  new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        bars.forEach((b, i) => setTimeout(() => { b.style.opacity = '0.9'; b.style.transform = 'scaleY(1)'; }, i * 110));
+      }
+    });
+  }, { threshold: 0.5 }).observe(bc);
+}
+
+// ═══ CURSOR GLOW (subtle) ═══
+let mouseX = -200, mouseY = -200;
+document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
 </script>
 </body>
 </html>
