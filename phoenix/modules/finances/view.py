@@ -8,13 +8,12 @@ from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QInputDialog, QPushButton,
 from phoenix.core.events import EventBus
 from phoenix.modules.finances.controller import FinancesController
 from phoenix.modules.finances.widgets import BudgetProgressItem, CashFlowChart, CategoryPie, FiltersBar, TransactionForm
-from phoenix.ui.workers import WorkerThread
+from phoenix.ui.workers import DbTaskWorker, WorkerPool
 from phoenix.ui.widgets.card import CardWidget
 from phoenix.ui.widgets.empty_state import EmptyState
 from phoenix.ui.widgets.stat_card import StatCard
 from phoenix.ui.widgets.table_widget import DataTableWidget
 from phoenix.utils.constants import Events
-from phoenix.utils.validators import validate_positive_number, validate_required
 
 
 class FinancesView(QWidget):
@@ -22,7 +21,8 @@ class FinancesView(QWidget):
         super().__init__()
         self.controller = FinancesController()
         self.event_bus = event_bus
-        self._workers: list[WorkerThread] = []
+        self.worker_pool = WorkerPool()
+        self._workers: list[DbTaskWorker] = []
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
@@ -44,6 +44,11 @@ class FinancesView(QWidget):
         self._build_budgets_tab()
         self._build_charts_tab()
         self.refresh()
+        self._run_worker(
+            self.controller.generate_monthly_pdf_if_due,
+            success_message=lambda output: f"Relatorio mensal: {output}" if output else "Relatorio mensal ja atualizado.",
+            refresh_after=False,
+        )
 
     def _build_summary_tab(self) -> None:
         layout = QVBoxLayout(self.summary_tab)
@@ -68,7 +73,7 @@ class FinancesView(QWidget):
         self.filters = FiltersBar()
         layout.addWidget(self.filters)
         controls = QHBoxLayout()
-        self.import_button = QPushButton("Importar CSV")
+        self.import_button = QPushButton("Importar OFX/CSV")
         self.import_button.setObjectName("btn-secondary")
         self.export_button = QPushButton("Exportar PDF")
         self.export_button.setObjectName("btn-secondary")
@@ -154,6 +159,11 @@ class FinancesView(QWidget):
         self.empty_state.setVisible(not rows)
 
     def _save(self) -> None:
+        if not self.form.validator.is_valid():
+            self.form.validation_label.setText("Corrija os campos destacados.")
+            self._publish_toast("Corrija os campos destacados.")
+            return
+
         title = self.form.title_input.text().strip()
         amount_text = self.form.amount_input.text().strip()
         tx_type = self.form.type_input.currentText()
@@ -162,13 +172,8 @@ class FinancesView(QWidget):
         note = self.form.note_input.text().strip()
         tx_date = self.form.date_input.date().toPyDate()
 
-        try:
-            validate_required(title, "Titulo")
-            amount = float(amount_text.replace(",", "."))
-            validate_positive_number(amount, "Valor")
-        except ValueError as exc:
-            self._publish_toast(str(exc))
-            return
+        amount = float(amount_text.replace(",", "."))
+        self.form.validation_label.setText("")
 
         self.controller.create_transaction(title, amount, tx_type, category, account, tx_date, note)
         self.form.title_input.clear()
@@ -209,11 +214,11 @@ class FinancesView(QWidget):
         self._reload()
 
     def _import_csv(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, "Importar CSV", "", "CSV (*.csv)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Importar arquivo", "", "Arquivos (*.csv *.ofx)")
         if not file_path:
             return
         self._run_worker(
-            self.controller.import_csv,
+            self.controller.import_file,
             file_path,
             success_message=lambda imported: f"{imported} transacoes adicionadas.",
         )
@@ -246,28 +251,29 @@ class FinancesView(QWidget):
         success_message,
         refresh_after: bool = True,
     ) -> None:
-        worker = WorkerThread(task, *args)
-        worker.completed.connect(lambda result: self._handle_worker_success(worker, result, success_message, refresh_after))
-        worker.failed.connect(lambda message: self._handle_worker_failure(worker, message))
+        worker = DbTaskWorker(task, *args)
+        worker.signals.completed.connect(
+            lambda result: self._handle_worker_success(worker, result, success_message, refresh_after)
+        )
+        worker.signals.failed.connect(lambda message: self._handle_worker_failure(worker, message))
         self._workers.append(worker)
-        worker.start()
+        self.worker_pool.submit(worker)
         self._publish_toast("Processando em segundo plano...")
 
-    def _handle_worker_success(self, worker: WorkerThread, result: object, success_message, refresh_after: bool) -> None:
+    def _handle_worker_success(self, worker: DbTaskWorker, result: object, success_message, refresh_after: bool) -> None:
         self._dispose_worker(worker)
         if refresh_after:
             self.refresh()
             self._publish_data_changed()
         self._publish_toast(str(success_message(result)))
 
-    def _handle_worker_failure(self, worker: WorkerThread, message: str) -> None:
+    def _handle_worker_failure(self, worker: DbTaskWorker, message: str) -> None:
         self._dispose_worker(worker)
         self._publish_toast(f"Falha: {message}")
 
-    def _dispose_worker(self, worker: WorkerThread) -> None:
+    def _dispose_worker(self, worker: DbTaskWorker) -> None:
         if worker in self._workers:
             self._workers.remove(worker)
-        worker.deleteLater()
 
     def _publish_data_changed(self) -> None:
         if self.event_bus is not None:

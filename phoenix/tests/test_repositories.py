@@ -1,6 +1,10 @@
+import pytest
+
 from phoenix.core.database import Base, engine, get_session
 from phoenix.core.models import Goal
 from phoenix.core.repository import Repository
+
+pytestmark = [pytest.mark.integration]
 
 
 def test_repository_add_and_list() -> None:

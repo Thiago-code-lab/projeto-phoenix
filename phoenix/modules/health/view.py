@@ -5,11 +5,8 @@ from datetime import date, timedelta
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import (
     QComboBox,
-    QDateEdit,
-    QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
-    QLineEdit,
     QPushButton,
     QTabWidget,
     QTableWidget,
@@ -21,6 +18,7 @@ from PyQt6.QtWidgets import (
 from phoenix.core.events import EventBus
 from phoenix.modules.health.controller import HealthController
 from phoenix.modules.health.widgets import BodyMetricChart, MetricSlider, MoodSelector, SleepChart, WaterProgress
+from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedDateEdit, ValidatedLineEdit, ValidatedSpinBox
 from phoenix.utils.constants import Events
 
 
@@ -50,9 +48,10 @@ class HealthView(QWidget):
 
     def _build_register_tab(self) -> None:
         layout = QFormLayout(self.register_tab)
-        self.weight_input = QDoubleSpinBox()
-        self.weight_input.setRange(0, 300)
+        self.weight_input = ValidatedSpinBox()
+        self.weight_input.set_min_max(0, 300)
         self.weight_input.setDecimals(1)
+        self.weight_input.setObjectName("health_weight")
         self.sleep_slider = MetricSlider(0, 14, 7)
         self.water_slider = MetricSlider(0, 5000, 2000)
         self.energy_slider = MetricSlider(1, 5, 3)
@@ -67,6 +66,7 @@ class HealthView(QWidget):
         self.water_progress.set_progress(self.water_slider.value(), 2000)
 
         layout.addRow("Peso (kg)", self.weight_input)
+        layout.addRow("", self.weight_input.error_label)
         layout.addRow("Sono (h)", self.sleep_slider)
         layout.addRow("Agua (ml)", self.water_slider)
         layout.addRow("Humor (1-5)", self.mood_selector)
@@ -74,6 +74,9 @@ class HealthView(QWidget):
         layout.addRow("Passos", self.steps_slider)
         layout.addRow("Hidratacao", self.water_progress)
         layout.addRow(self.save_day_button)
+        self.day_validator = FormValidator([self.weight_input], self)
+        self.day_validator.bind_submit_button(self.save_day_button)
+        self.weight_input.valueChanged.connect(lambda _: self.day_validator.is_valid())
 
     def _build_charts_tab(self) -> None:
         layout = QVBoxLayout(self.charts_tab)
@@ -99,12 +102,13 @@ class HealthView(QWidget):
     def _build_workouts_tab(self) -> None:
         layout = QVBoxLayout(self.workouts_tab)
         form = QHBoxLayout()
-        self.workout_type = QLineEdit()
+        self.workout_type = ValidatedLineEdit()
+        self.workout_type.set_required(True)
         self.workout_type.setPlaceholderText("Tipo")
         self.workout_duration = MetricSlider(0, 240, 45)
         self.workout_calories = MetricSlider(0, 2000, 300)
-        self.workout_date = QDateEdit()
-        self.workout_date.setCalendarPopup(True)
+        self.workout_date = ValidatedDateEdit()
+        self.workout_date.set_allow_future(False)
         self.workout_date.setDate(QDate.currentDate())
         self.add_workout_button = QPushButton("+ Registrar Treino")
         self.add_workout_button.setObjectName("btn-primary")
@@ -115,6 +119,11 @@ class HealthView(QWidget):
         form.addWidget(self.workout_date)
         form.addWidget(self.add_workout_button)
         layout.addLayout(form)
+        layout.addWidget(self.workout_type.error_label)
+        layout.addWidget(self.workout_date.error_label)
+        self.workout_validator = FormValidator([self.workout_type, self.workout_date], self)
+        self.workout_validator.bind_submit_button(self.add_workout_button)
+        self.workout_type.textChanged.connect(lambda _: self.workout_validator.is_valid())
 
         self.workout_table = QTableWidget(0, 4)
         self.workout_table.setHorizontalHeaderLabels(["ID", "Tipo", "Duracao", "Calorias"])
@@ -179,6 +188,9 @@ class HealthView(QWidget):
         self.refresh()
 
     def _save_workout(self) -> None:
+        if not self.workout_validator.is_valid():
+            self.show_toast("Corrija os campos do treino.", kind="error")
+            return
         self.controller.add_workout(
             {
                 "date": self.workout_date.date().toPyDate(),

@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QStackedWidget,
     QTabWidget,
@@ -24,6 +23,7 @@ from phoenix.modules.habits.controller import HabitsController
 from phoenix.modules.habits.widgets import HabitRow, HeatmapWidget, StreakBadge
 from phoenix.ui.widgets.confirm_dialog import ConfirmDialog
 from phoenix.ui.widgets.empty_state import EmptyState
+from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedLineEdit
 from phoenix.utils.constants import Events
 
 
@@ -93,7 +93,9 @@ class HabitsView(QWidget):
     def _build_manage_tab(self) -> None:
         layout = QVBoxLayout(self.manage_tab)
         form = QHBoxLayout()
-        self.name_input = QLineEdit()
+        self.name_input = ValidatedLineEdit()
+        self.name_input.set_required(True)
+        self.name_input.setObjectName("habit_name")
         self.name_input.setPlaceholderText("Nome do habito")
         self.frequency_input = QComboBox()
         self.frequency_input.addItems(["daily", "weekly", "custom"])
@@ -106,6 +108,7 @@ class HabitsView(QWidget):
         form.addWidget(self.active_input)
         form.addWidget(self.save_button)
         layout.addLayout(form)
+        layout.addWidget(self.name_input.error_label)
 
         actions = QHBoxLayout()
         self.edit_button = QPushButton("Editar")
@@ -126,6 +129,9 @@ class HabitsView(QWidget):
         self.edit_button.clicked.connect(self._edit_selected)
         self.archive_button.clicked.connect(self._archive_selected)
         self.delete_button.clicked.connect(self._delete_selected)
+        self.form_validator = FormValidator([self.name_input], self)
+        self.form_validator.bind_submit_button(self.save_button)
+        self.name_input.textChanged.connect(lambda _: self.form_validator.is_valid())
 
     def _reload_today(self, habits: list[Habit]) -> None:
         while self.today_list_layout.count():
@@ -190,7 +196,7 @@ class HabitsView(QWidget):
 
     def _save(self) -> None:
         name = self.name_input.text().strip()
-        if not self._validate_field(self.name_input, bool(name)):
+        if not self.form_validator.is_valid():
             self.show_toast("Informe um nome valido.", kind="error")
             return
         self.controller.create(
@@ -280,9 +286,3 @@ class HabitsView(QWidget):
     def _publish_data_changed(self) -> None:
         if self.event_bus is not None:
             self.event_bus.publish(Events.DATA_CHANGED, {"module": "habits"})
-
-    def _validate_field(self, field: QLineEdit, is_valid: bool) -> bool:
-        field.setProperty("invalid", not is_valid)
-        field.style().unpolish(field)
-        field.style().polish(field)
-        return is_valid

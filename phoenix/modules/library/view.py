@@ -3,13 +3,11 @@ from __future__ import annotations
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import (
     QComboBox,
-    QDateEdit,
     QDialog,
     QFormLayout,
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QScrollArea,
     QSpinBox,
@@ -24,6 +22,7 @@ from phoenix.core.models import Book
 from phoenix.modules.library.controller import LibraryController
 from phoenix.modules.library.widgets import BookCard, GenreChart, ReadingProgressBar, StarRating
 from phoenix.ui.widgets.empty_state import EmptyState
+from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedDateEdit, ValidatedLineEdit
 from phoenix.utils.constants import Events
 
 
@@ -39,7 +38,7 @@ class LibraryView(QWidget):
         layout.setSpacing(12)
 
         top = QHBoxLayout()
-        self.search_input = QLineEdit()
+        self.search_input = ValidatedLineEdit()
         self.search_input.setPlaceholderText("Busca...")
         self.status_filter = QComboBox()
         self.status_filter.addItems(["all", "wishlist", "reading", "completed", "abandoned"])
@@ -140,9 +139,12 @@ class LibraryView(QWidget):
         root = QVBoxLayout(dialog)
 
         form = QFormLayout()
-        title_input = QLineEdit(book.title if book else "")
-        author_input = QLineEdit(book.author if book else "")
-        genre_input = QLineEdit(book.genre if book else "")
+        title_input = ValidatedLineEdit(book.title if book else "")
+        title_input.set_required(True)
+        author_input = ValidatedLineEdit(book.author if book else "")
+        author_input.set_required(True)
+        genre_input = ValidatedLineEdit(book.genre if book else "")
+        genre_input.set_required(True)
         status_input = QComboBox()
         status_input.addItems(["wishlist", "reading", "completed", "abandoned"])
         if book:
@@ -163,10 +165,10 @@ class LibraryView(QWidget):
         if book and book.rating:
             rating.set_value(int(book.rating))
 
-        start_date = QDateEdit()
-        start_date.setCalendarPopup(True)
-        end_date = QDateEdit()
-        end_date.setCalendarPopup(True)
+        start_date = ValidatedDateEdit()
+        start_date.set_allow_future(False)
+        end_date = ValidatedDateEdit()
+        end_date.set_allow_future(False)
         if book and book.start_date:
             start_date.setDate(QDate(book.start_date.year, book.start_date.month, book.start_date.day))
         else:
@@ -177,8 +179,11 @@ class LibraryView(QWidget):
             end_date.setDate(QDate.currentDate())
 
         form.addRow("Titulo", title_input)
+        form.addRow("", title_input.error_label)
         form.addRow("Autor", author_input)
+        form.addRow("", author_input.error_label)
         form.addRow("Genero", genre_input)
+        form.addRow("", genre_input.error_label)
         form.addRow("Status", status_input)
         form.addRow("Paginas", pages_input)
         form.addRow("Paginas lidas", pages_read_input)
@@ -186,12 +191,19 @@ class LibraryView(QWidget):
         form.addRow("Notas", notes_input)
         form.addRow("Rating", rating)
         form.addRow("Inicio", start_date)
+        form.addRow("", start_date.error_label)
         form.addRow("Fim", end_date)
+        form.addRow("", end_date.error_label)
         root.addLayout(form)
 
         buttons = QHBoxLayout()
         save = QPushButton("Salvar")
         save.setObjectName("btn-primary")
+        validator = FormValidator([title_input, author_input, genre_input, start_date, end_date], dialog)
+        validator.bind_submit_button(save)
+        title_input.textChanged.connect(lambda _: validator.is_valid())
+        author_input.textChanged.connect(lambda _: validator.is_valid())
+        genre_input.textChanged.connect(lambda _: validator.is_valid())
         delete = QPushButton("Excluir")
         delete.setObjectName("btn-secondary")
         close = QPushButton("Fechar")
@@ -206,6 +218,7 @@ class LibraryView(QWidget):
             lambda: self._persist_book(
                 dialog,
                 book,
+                validator,
                 {
                     "title": title_input.text().strip(),
                     "author": author_input.text().strip(),
@@ -224,10 +237,12 @@ class LibraryView(QWidget):
         close.clicked.connect(dialog.reject)
         dialog.exec()
 
-    def _persist_book(self, dialog: QDialog, book: Book | None, payload: dict) -> None:
-        title = payload["title"]
-        if not title:
+    def _persist_book(self, dialog: QDialog, book: Book | None, validator: FormValidator, payload: dict) -> None:
+        if not validator.is_valid():
             self.show_toast("Titulo e obrigatorio.", kind="error")
+            return
+        if payload["end_date"] < payload["start_date"]:
+            self.show_toast("Data final deve ser maior ou igual a data inicial.", kind="error")
             return
         if book is None:
             self.controller.create(payload)

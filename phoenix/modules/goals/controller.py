@@ -5,11 +5,12 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from phoenix.core.database import get_session
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import Goal, GoalMilestone
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class GoalsController:
     def get_all(self, status: str | None = None, category: str | None = None) -> list[Goal]:
         with get_session() as session:

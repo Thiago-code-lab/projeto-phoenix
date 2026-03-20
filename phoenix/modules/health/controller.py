@@ -4,11 +4,12 @@ from datetime import date, timedelta
 
 from sqlalchemy import func, select
 
-from phoenix.core.database import get_session
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import HealthLog, Workout
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class HealthController:
     def get_log(self, date: date) -> HealthLog | None:
         with get_session() as session:

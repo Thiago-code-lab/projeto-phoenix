@@ -3,12 +3,10 @@ from __future__ import annotations
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import (
     QComboBox,
-    QDateEdit,
     QDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QStackedWidget,
     QTableWidget,
@@ -20,6 +18,7 @@ from PyQt6.QtWidgets import (
 from phoenix.core.events import EventBus
 from phoenix.modules.projects.controller import ProjectsController
 from phoenix.modules.projects.widgets import KanbanBoard
+from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedDateEdit, ValidatedLineEdit
 from phoenix.utils.constants import Events
 
 
@@ -116,16 +115,23 @@ class ProjectsView(QWidget):
         dialog = QDialog(self)
         dialog.setWindowTitle("Novo projeto")
         form = QFormLayout(dialog)
-        name = QLineEdit()
-        color = QLineEdit("#8b5cf6")
+        name = ValidatedLineEdit()
+        name.set_required(True)
+        color = ValidatedLineEdit("#8b5cf6")
         form.addRow("Nome", name)
+        form.addRow("", name.error_label)
         form.addRow("Cor", color)
+        form.addRow("", color.error_label)
         save = QPushButton("Salvar")
+        validator = FormValidator([name, color], dialog)
+        validator.bind_submit_button(save)
+        name.textChanged.connect(lambda _: validator.is_valid())
+        color.textChanged.connect(lambda _: validator.is_valid())
         save.clicked.connect(dialog.accept)
         form.addRow(save)
         if dialog.exec() == 0:
             return
-        if not name.text().strip():
+        if not validator.is_valid():
             return
         project = self.controller.create_project({"name": name.text().strip(), "color": color.text().strip() or "#8b5cf6"})
         self._current_project_id = project.id
@@ -140,24 +146,30 @@ class ProjectsView(QWidget):
         dialog = QDialog(self)
         dialog.setWindowTitle("Nova tarefa")
         form = QFormLayout(dialog)
-        title = QLineEdit()
+        title = ValidatedLineEdit()
+        title.set_required(True)
         status = QComboBox()
         status.addItems(["backlog", "todo", "in_progress", "review", "done"])
         priority = QComboBox()
         priority.addItems(["low", "medium", "high"])
-        due_date = QDateEdit()
-        due_date.setCalendarPopup(True)
+        due_date = ValidatedDateEdit()
+        due_date.set_allow_future(True)
         due_date.setDate(QDate.currentDate())
         form.addRow("Titulo", title)
+        form.addRow("", title.error_label)
         form.addRow("Status", status)
         form.addRow("Prioridade", priority)
         form.addRow("Prazo", due_date)
+        form.addRow("", due_date.error_label)
         save = QPushButton("Salvar")
+        validator = FormValidator([title, due_date], dialog)
+        validator.bind_submit_button(save)
+        title.textChanged.connect(lambda _: validator.is_valid())
         save.clicked.connect(dialog.accept)
         form.addRow(save)
         if dialog.exec() == 0:
             return
-        if not title.text().strip():
+        if not validator.is_valid():
             return
         self.controller.create_task(
             {

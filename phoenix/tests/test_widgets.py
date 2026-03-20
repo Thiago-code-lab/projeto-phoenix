@@ -1,4 +1,8 @@
+import pytest
+
 from phoenix.ui.widgets.stat_card import StatCard
+
+pytestmark = [pytest.mark.ui]
 
 
 def test_stat_card_updates(app) -> None:

@@ -4,12 +4,16 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
-from phoenix.core.database import get_session
+from phoenix.core.cache import LRUCache
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import Habit, HabitLog
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class HabitsController:
+    _streak_cache: LRUCache[int] = LRUCache(max_size=256)
+
     def get_all(self, active_only: bool = True) -> list[Habit]:
         with get_session() as session:
             query = select(Habit).order_by(Habit.created_at.desc())
@@ -68,8 +72,12 @@ class HabitsController:
             existing = session.scalar(select(HabitLog).where(HabitLog.habit_id == habit_id, HabitLog.date == today))
             repository = Repository(session, HabitLog)
             if existing is None:
-                return repository.create(habit_id=habit_id, date=today, completed=completed, note=note or None)
-            return repository.update(existing, completed=completed, note=note or None)
+                result = repository.create(habit_id=habit_id, date=today, completed=completed, note=note or None)
+            else:
+                result = repository.update(existing, completed=completed, note=note or None)
+        self._streak_cache.invalidate(f"streak:{habit_id}:")
+        self._streak_cache.invalidate(f"longest:{habit_id}:")
+        return result
 
     def get_log(self, habit_id: int, date: date) -> HabitLog | None:
         with get_session() as session:
@@ -82,16 +90,26 @@ class HabitsController:
 
     def get_streak(self, habit_id: int) -> int:
         today = date.today()
+        cache_key = f"streak:{habit_id}:{today.isoformat()}"
+        cached = self._streak_cache.get(cache_key)
+        if cached is not None:
+            return cached
         streak = 0
         cursor = today
         completed_days = {log.date for log in self.get_logs_range(habit_id, today - timedelta(days=365), today) if log.completed}
         while cursor in completed_days:
             streak += 1
             cursor -= timedelta(days=1)
+        self._streak_cache.set(cache_key, streak)
         return streak
 
     def get_longest_streak(self, habit_id: int) -> int:
-        logs = self.get_logs_range(habit_id, date.today() - timedelta(days=365), date.today())
+        today = date.today()
+        cache_key = f"longest:{habit_id}:{today.isoformat()}"
+        cached = self._streak_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        logs = self.get_logs_range(habit_id, today - timedelta(days=365), today)
         completed = sorted([log.date for log in logs if log.completed])
         if not completed:
             return 0
@@ -103,6 +121,7 @@ class HabitsController:
                 longest = max(longest, current)
             else:
                 current = 1
+        self._streak_cache.set(cache_key, longest)
         return longest
 
     def get_completion_rate(self, habit_id: int, days: int = 30) -> float:

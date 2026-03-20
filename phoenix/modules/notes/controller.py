@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from sqlalchemy import or_, select
 
-from phoenix.core.database import get_session
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import Note
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class NotesController:
     def list_notes(self) -> list[Note]:
         with get_session() as session:

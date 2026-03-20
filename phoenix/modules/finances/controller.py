@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -12,14 +13,14 @@ from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle, Par
 from reportlab.lib.styles import getSampleStyleSheet
 from sqlalchemy import select
 
-from phoenix.core.database import DATABASE_PATH, get_session
+from phoenix.core.database import DATABASE_PATH, db_operation_class, get_session
 from phoenix.core.models import Budget, Transaction
-from phoenix.core.database import get_session
 from phoenix.core.repository import Repository
 
 SETTINGS = Dynaconf(settings_files=[str(DATABASE_PATH.parent / "settings.toml")])
 
 
+@db_operation_class
 class FinancesController:
     def list_transactions(
         self,
@@ -145,21 +146,63 @@ class FinancesController:
         return labels[-12:], values[-12:]
 
     def import_csv(self, file_path: str) -> int:
-        imported = 0
         with open(file_path, "r", encoding="utf-8") as handler:
             reader = csv.DictReader(handler)
+            mappings: list[dict[str, object]] = []
             for row in reader:
                 parsed_date = datetime.strptime(row["data"], "%Y-%m-%d").date()
-                self.create_transaction(
-                    title=row["descricao"],
-                    amount=float(row["valor"]),
-                    tx_type=row["tipo"],
-                    category=row.get("categoria", "Outros"),
-                    account=SETTINGS.get("finance.default_account", "Principal"),
-                    tx_date=parsed_date,
+                mappings.append(
+                    {
+                        "title": row["descricao"],
+                        "amount": float(row["valor"]),
+                        "type": row["tipo"],
+                        "category": row.get("categoria", "Outros"),
+                        "account": SETTINGS.get("finance.default_account", "Principal"),
+                        "date": parsed_date,
+                        "note": row.get("nota") or None,
+                    }
                 )
-                imported += 1
-        return imported
+        return self._bulk_insert_transactions(mappings)
+
+    def import_ofx(self, file_path: str) -> int:
+        """Importa transacoes de OFX usando parser leve por tags SGML."""
+
+        content = Path(file_path).read_text(encoding="latin-1", errors="ignore")
+        mappings: list[dict[str, object]] = []
+        transactions = re.findall(r"<STMTTRN>(.*?)</STMTTRN>", content, flags=re.IGNORECASE | re.DOTALL)
+        for block in transactions:
+            amount_match = re.search(r"<TRNAMT>([^<\n\r]+)", block, flags=re.IGNORECASE)
+            date_match = re.search(r"<DTPOSTED>(\d{8})", block, flags=re.IGNORECASE)
+            memo_match = re.search(r"<MEMO>([^<\n\r]+)", block, flags=re.IGNORECASE)
+            type_match = re.search(r"<TRNTYPE>([^<\n\r]+)", block, flags=re.IGNORECASE)
+            if not amount_match or not date_match:
+                continue
+            amount = float(amount_match.group(1).replace(",", "."))
+            tx_date = datetime.strptime(date_match.group(1), "%Y%m%d").date()
+            trn_type = (type_match.group(1).strip().lower() if type_match else "debit")
+            normalized_type = "income" if trn_type in {"credit", "dep", "int"} or amount > 0 else "expense"
+            mappings.append(
+                {
+                    "title": (memo_match.group(1).strip() if memo_match else "Lancamento OFX")[:200],
+                    "amount": abs(amount),
+                    "type": normalized_type,
+                    "category": "Outros",
+                    "account": SETTINGS.get("finance.default_account", "Principal"),
+                    "date": tx_date,
+                    "note": "Importado via OFX",
+                }
+            )
+        return self._bulk_insert_transactions(mappings)
+
+    def import_file(self, file_path: str) -> int:
+        """Importa movimentacoes por extensao suportada (CSV/OFX)."""
+
+        suffix = Path(file_path).suffix.lower()
+        if suffix == ".ofx":
+            return self.import_ofx(file_path)
+        if suffix == ".csv":
+            return self.import_csv(file_path)
+        raise ValueError("Formato nao suportado. Use CSV ou OFX.")
 
     def export_monthly_pdf(self, output_path: str, period: str = "mes") -> str:
         transactions = self.list_transactions(period=period)
@@ -190,6 +233,20 @@ class FinancesController:
         document.build(story)
         return output_path
 
+    def generate_monthly_pdf_if_due(self) -> str | None:
+        """Gera automaticamente relatorio mensal unico por mes corrente."""
+
+        reports_dir = DATABASE_PATH.parent / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        marker = reports_dir / ".last_monthly_report"
+        current_key = date.today().strftime("%Y-%m")
+        if marker.exists() and marker.read_text(encoding="utf-8").strip() == current_key:
+            return None
+        destination = reports_dir / f"extrato-{current_key}.pdf"
+        self.export_monthly_pdf(str(destination), period="mes")
+        marker.write_text(current_key, encoding="utf-8")
+        return str(destination)
+
     def add_category(self, category: str, kind: str) -> list[str]:
         key = "finance.categories_income" if kind == "income" else "finance.categories_expense"
         categories = list(SETTINGS.get(key, []))
@@ -215,3 +272,13 @@ class FinancesController:
         if period == "personalizado" and start and end:
             return start, end
         return today.replace(day=1), today
+
+    def _bulk_insert_transactions(self, mappings: list[dict[str, object]]) -> int:
+        """Insere transacoes em lote para reduzir overhead de ORM por registro."""
+
+        if not mappings:
+            return 0
+        with get_session() as session:
+            session.bulk_insert_mappings(Transaction, mappings)
+            session.flush()
+        return len(mappings)

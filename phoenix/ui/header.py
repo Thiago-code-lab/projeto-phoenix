@@ -18,6 +18,8 @@ class Header(QWidget):
         self.title_label.setObjectName("page-title")
         self.subtitle_label = QLabel(subtitle)
         self.subtitle_label.setObjectName("header-subtitle")
+        self.hint_label = QLabel("Dica: Ctrl+P abre a paleta de comandos")
+        self.hint_label.setObjectName("header-hint")
 
         labels = QWidget()
         labels_layout = QVBoxLayout(labels)
@@ -25,7 +27,12 @@ class Header(QWidget):
         labels_layout.setSpacing(2)
         labels_layout.addWidget(self.title_label)
         labels_layout.addWidget(self.subtitle_label)
+        labels_layout.addWidget(self.hint_label)
         layout.addWidget(labels, 1)
+
+        self.quick_actions_button = QPushButton("Acoes rapidas")
+        self.quick_actions_button.setObjectName("btn-secondary")
+        layout.addWidget(self.quick_actions_button, 0, Qt.AlignmentFlag.AlignRight)
 
         self.action_button = QPushButton("Alternar tema")
         self.action_button.setObjectName("btn-secondary")
@@ -41,3 +48,6 @@ class Header(QWidget):
 
     def set_title(self, title: str) -> None:
         self.title_label.setText(title)
+
+    def set_hint(self, text: str) -> None:
+        self.hint_label.setText(text)

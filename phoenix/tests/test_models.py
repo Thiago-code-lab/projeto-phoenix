@@ -1,4 +1,8 @@
+import pytest
+
 from phoenix.core.models import Goal, Habit, Note
+
+pytestmark = [pytest.mark.unit]
 
 
 def test_goal_model_defaults() -> None:

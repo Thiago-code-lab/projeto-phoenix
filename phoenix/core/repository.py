@@ -9,7 +9,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from .database import Base
+from .database import Base, db_operation
 
 ModelT = TypeVar("ModelT", bound=Base)
 LOGGER = logging.getLogger(__name__)
@@ -27,6 +27,7 @@ class Repository(Generic[ModelT]):
 
         return select(self.model)
 
+    @db_operation
     def get_all(self) -> list[ModelT]:
         """Lista todas as entidades do modelo atual."""
 
@@ -41,6 +42,7 @@ class Repository(Generic[ModelT]):
 
         return self.get_all()
 
+    @db_operation
     def get_by_id(self, entity_id: int) -> ModelT | None:
         """Busca uma entidade por identificador primario."""
 
@@ -55,6 +57,7 @@ class Repository(Generic[ModelT]):
 
         return self.get_by_id(entity_id)
 
+    @db_operation
     def create(self, **data: object) -> ModelT:
         """Cria uma entidade e a sincroniza com a sessao atual."""
 
@@ -72,6 +75,7 @@ class Repository(Generic[ModelT]):
 
         return self.create(**data)
 
+    @db_operation
     def update(self, entity: ModelT, **data: object) -> ModelT:
         """Atualiza uma entidade existente."""
 
@@ -85,6 +89,7 @@ class Repository(Generic[ModelT]):
             LOGGER.exception("Falha ao atualizar entidade de %s", self.model.__name__)
             raise
 
+    @db_operation
     def delete(self, entity: ModelT) -> None:
         """Remove uma entidade existente."""
 

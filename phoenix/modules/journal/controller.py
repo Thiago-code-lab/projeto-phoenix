@@ -4,11 +4,12 @@ from datetime import date
 
 from sqlalchemy import select
 
-from phoenix.core.database import get_session
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import JournalEntry
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class JournalController:
     def get_entries(self, month: date | None = None, search: str | None = None, tags: list[str] | None = None) -> list[JournalEntry]:
         with get_session() as session:

@@ -44,10 +44,16 @@ class DashboardView(QWidget):
         self.mood_plot.setBackground("#18181b")
         self.mood_chart.layout.addWidget(self.mood_plot)
 
+        self.productivity_chart = CardWidget("Produtividade semanal")
+        self.productivity_plot = pg.PlotWidget()
+        self.productivity_plot.setBackground("#18181b")
+        self.productivity_chart.layout.addWidget(self.productivity_plot)
+
         charts_grid = QGridLayout()
         charts_grid.setSpacing(16)
         charts_grid.addWidget(self.finance_chart, 0, 0)
         charts_grid.addWidget(self.mood_chart, 0, 1)
+        charts_grid.addWidget(self.productivity_chart, 1, 0, 1, 2)
         layout.addLayout(charts_grid)
 
         self.upcoming_card = CardWidget("Proximas metas")
@@ -62,11 +68,21 @@ class DashboardView(QWidget):
         self.tasks_list = QListWidget()
         self.tasks_card.layout.addWidget(self.tasks_list)
 
+        self.daily_summary_card = CardWidget("Resumo do dia")
+        self.daily_summary_list = QListWidget()
+        self.daily_summary_card.layout.addWidget(self.daily_summary_list)
+
+        self.milestones_card = CardWidget("Proximos milestones")
+        self.milestones_list = QListWidget()
+        self.milestones_card.layout.addWidget(self.milestones_list)
+
         quick_grid = QGridLayout()
         quick_grid.setSpacing(16)
         quick_grid.addWidget(self.upcoming_card, 0, 0)
         quick_grid.addWidget(self.habits_card, 0, 1)
         quick_grid.addWidget(self.tasks_card, 0, 2)
+        quick_grid.addWidget(self.daily_summary_card, 1, 0, 1, 2)
+        quick_grid.addWidget(self.milestones_card, 1, 2)
         layout.addLayout(quick_grid)
 
         self.upcoming_list.itemClicked.connect(lambda item: self._navigate(1))
@@ -82,7 +98,7 @@ class DashboardView(QWidget):
         self.goal_card.update_values(str(summary["goals_active"]), f"+{summary['goals_completed_pct']}% concluidas")
         balance = float(summary["balance"])
         self.balance_card.update_values(f"R$ {balance:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), "+contas e fluxo")
-        self.streak_card.update_values(f"{summary['best_streak']} dias", "melhor habito ativo")
+        self.streak_card.update_values(f"{summary['global_streak']} dias", f"melhor: {summary['best_streak']} dias")
         self.focus_card.update_values(str(summary["focus_week"]), "sessoes na semana")
 
         labels, incomes, expenses = self.controller.monthly_cash_flow_last_six_months()
@@ -104,6 +120,13 @@ class DashboardView(QWidget):
         ticks = [(index, label) for index, label in enumerate(mood_labels) if index % 5 == 0]
         self.mood_plot.getAxis("bottom").setTicks([ticks])
 
+        productivity_labels, productivity_values = self.controller.weekly_productivity()
+        self.productivity_plot.clear()
+        self.productivity_plot.showGrid(x=True, y=True, alpha=0.2)
+        self.productivity_plot.plot(productivity_values, pen=pg.mkPen("#f59e0b", width=3), symbol="o", symbolSize=6)
+        p_ticks = [(index, label) for index, label in enumerate(productivity_labels)]
+        self.productivity_plot.getAxis("bottom").setTicks([p_ticks])
+
         self.upcoming_list.clear()
         for goal in self.controller.upcoming_goals():
             due = goal.target_date.strftime("%d/%m") if goal.target_date else "Sem data"
@@ -113,6 +136,20 @@ class DashboardView(QWidget):
         for task in self.controller.active_tasks():
             due = task.due_date.strftime("%d/%m") if task.due_date else "Sem prazo"
             self.tasks_list.addItem(QListWidgetItem(f"{task.title}  |  {due}"))
+
+        self.daily_summary_list.clear()
+        daily = self.controller.daily_overview()
+        self.daily_summary_list.addItem(f"Habitos pendentes: {len(daily['pending_habits'])}")
+        for name in list(daily["pending_habits"])[:4]:
+            self.daily_summary_list.addItem(f"- {name}")
+        self.daily_summary_list.addItem(f"Meta de foco hoje: {daily['focus_hours']}h")
+        self.daily_summary_list.addItem(f"Tarefas Kanban do dia: {len(daily['tasks_today'])}")
+
+        self.milestones_list.clear()
+        for milestone in self.controller.upcoming_milestones():
+            self.milestones_list.addItem(
+                QListWidgetItem(f"{milestone['goal']} / {milestone['title']} - D-{milestone['days_left']}")
+            )
 
         while self.habits_list.count():
             child = self.habits_list.takeAt(0)
@@ -135,7 +172,19 @@ class DashboardView(QWidget):
 
     def _animate_cards(self) -> None:
         self._animations.clear()
-        for index, widget in enumerate(self.stat_cards + [self.finance_chart, self.mood_chart, self.upcoming_card, self.habits_card, self.tasks_card]):
+        for index, widget in enumerate(
+            self.stat_cards
+            + [
+                self.finance_chart,
+                self.mood_chart,
+                self.productivity_chart,
+                self.upcoming_card,
+                self.habits_card,
+                self.tasks_card,
+                self.daily_summary_card,
+                self.milestones_card,
+            ]
+        ):
             effect = QGraphicsOpacityEffect(widget)
             widget.setGraphicsEffect(effect)
             animation = QPropertyAnimation(effect, b"opacity", self)

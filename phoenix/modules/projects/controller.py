@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from phoenix.core.database import get_session
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import Project, Task
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class ProjectsController:
     def get_all_projects(self) -> list[Project]:
         with get_session() as session:

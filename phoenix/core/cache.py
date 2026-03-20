@@ -3,6 +3,7 @@ from __future__ import annotations
 """Cache simples em memoria para dados reutilizados entre navegacoes."""
 
 from collections.abc import Callable
+from collections import OrderedDict
 from dataclasses import dataclass
 from time import monotonic
 from typing import Generic, TypeVar
@@ -60,3 +61,39 @@ class MemoryCache:
         keys = [key for key in self._store if key.startswith(prefix)]
         for key in keys:
             self._store.pop(key, None)
+
+
+class LRUCache(Generic[CacheT]):
+    """Cache LRU em memoria com capacidade maxima fixa."""
+
+    def __init__(self, max_size: int = 128) -> None:
+        self.max_size = max(1, max_size)
+        self._store: OrderedDict[str, CacheT] = OrderedDict()
+
+    def get(self, key: str) -> CacheT | None:
+        """Retorna uma chave e a move para o fim do uso recente."""
+
+        if key not in self._store:
+            return None
+        value = self._store.pop(key)
+        self._store[key] = value
+        return value
+
+    def set(self, key: str, value: CacheT) -> None:
+        """Armazena valor mantendo estrategia LRU por capacidade."""
+
+        if key in self._store:
+            self._store.pop(key)
+        self._store[key] = value
+        while len(self._store) > self.max_size:
+            self._store.popitem(last=False)
+
+    def invalidate(self, prefix: str | None = None) -> None:
+        """Invalida o cache inteiro ou por prefixo."""
+
+        if prefix is None:
+            self._store.clear()
+            return
+        for key in list(self._store.keys()):
+            if key.startswith(prefix):
+                self._store.pop(key, None)

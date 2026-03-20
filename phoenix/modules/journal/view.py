@@ -4,12 +4,10 @@ from datetime import date
 
 from PyQt6.QtCore import QDate, QTimer
 from PyQt6.QtWidgets import (
-    QDateEdit,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
+    QProgressBar,
     QPushButton,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -19,6 +17,7 @@ from phoenix.core.models import JournalEntry
 from phoenix.modules.journal.controller import JournalController
 from phoenix.modules.journal.widgets import CalendarStrip, EntryEditor, MoodSelector, RichToolbar, TagChipInput
 from phoenix.ui.widgets.confirm_dialog import ConfirmDialog
+from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedDateEdit, ValidatedLineEdit
 from phoenix.utils.constants import Events, UiLimits
 
 
@@ -48,7 +47,7 @@ class JournalView(QWidget):
         month_controls.addWidget(self.next_month)
         left_panel.addLayout(month_controls)
 
-        self.search_input = QLineEdit()
+        self.search_input = ValidatedLineEdit()
         self.search_input.setPlaceholderText("Busca")
         left_panel.addWidget(self.search_input)
         top.addLayout(left_panel, 1)
@@ -58,9 +57,12 @@ class JournalView(QWidget):
         center_panel.addWidget(self.toolbar)
         layout.addLayout(top)
 
-        self.title_input = QLineEdit()
+        self.title_input = ValidatedLineEdit()
+        self.title_input.set_required(True)
+        self.title_input.setObjectName("journal_title")
         self.title_input.setPlaceholderText("Titulo da entrada")
         center_panel.addWidget(self.title_input)
+        center_panel.addWidget(self.title_input.error_label)
 
         meta = QHBoxLayout()
         self.mood_selector = MoodSelector()
@@ -82,14 +84,24 @@ class JournalView(QWidget):
         actions.addWidget(self.delete_button)
         actions.addStretch(1)
         center_panel.addLayout(actions)
+
+        self.autosave_status = QLabel("Sem alteracoes pendentes")
+        self.autosave_status.setObjectName("autosave-status")
+        self.autosave_progress = QProgressBar()
+        self.autosave_progress.setRange(0, 100)
+        self.autosave_progress.setValue(0)
+        self.autosave_progress.setTextVisible(False)
+        center_panel.addWidget(self.autosave_status)
+        center_panel.addWidget(self.autosave_progress)
         top.addLayout(center_panel, 2)
 
         right_panel = QVBoxLayout()
         right_panel.addWidget(QLabel("Data"))
-        self.entry_date = QDateEdit()
-        self.entry_date.setCalendarPopup(True)
+        self.entry_date = ValidatedDateEdit()
+        self.entry_date.set_allow_future(False)
         self.entry_date.setDate(QDate.currentDate())
         right_panel.addWidget(self.entry_date)
+        right_panel.addWidget(self.entry_date.error_label)
         self.streak_label = QLabel("Streak: 0 dias")
         right_panel.addWidget(self.streak_label)
         right_panel.addStretch(1)
@@ -99,6 +111,10 @@ class JournalView(QWidget):
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.setInterval(UiLimits.AUTO_SAVE_INTERVAL_MS)
         self._autosave_timer.timeout.connect(self._autosave)
+        self._autosave_progress_timer = QTimer(self)
+        self._autosave_progress_timer.setInterval(100)
+        self._autosave_progress_timer.timeout.connect(self._update_autosave_progress)
+        self._autosave_deadline_ms = 0
 
         self.save_button.clicked.connect(self._save)
         self.delete_button.clicked.connect(self._delete)
@@ -108,6 +124,9 @@ class JournalView(QWidget):
         self.editor.editor.textChanged.connect(self._schedule_autosave)
         self.title_input.textChanged.connect(self._schedule_autosave)
         self.entry_date.dateChanged.connect(self._load_entry_for_date)
+        self.form_validator = FormValidator([self.title_input, self.entry_date], self)
+        self.form_validator.bind_submit_button(self.save_button)
+        self.title_input.textChanged.connect(lambda _: self.form_validator.is_valid())
         self._reload()
 
     def _reload(self) -> None:
@@ -129,13 +148,16 @@ class JournalView(QWidget):
             self.tags_input.set_tags([])
 
     def _save(self) -> None:
+        if not self.form_validator.is_valid():
+            self.show_toast("Corrija os campos destacados.", kind="error")
+            return
         content = self.editor.editor.toPlainText().strip()
         if not content:
             self.show_toast("Conteudo vazio nao pode ser salvo.", kind="warning")
             return
         payload = {
             "date": self.entry_date.date().toPyDate(),
-            "title": self.title_input.text().strip() or "Entrada",
+            "title": self.title_input.text().strip(),
             "content": content,
             "mood": self.mood_selector.value(),
             "tags": self.tags_input.tags(),
@@ -145,16 +167,33 @@ class JournalView(QWidget):
         else:
             self._selected_entry = self.controller.update(self._selected_entry.id, payload)
         self.show_toast("Entrada salva.", kind="success")
+        self.autosave_status.setText("Todas as alteracoes salvas")
+        self.autosave_progress.setValue(100)
+        self._autosave_progress_timer.stop()
         self._publish_data_changed()
         self._reload()
 
     def _autosave(self) -> None:
         if not self.editor.editor.toPlainText().strip():
             return
+        self.autosave_status.setText("Salvando automaticamente...")
         self._save()
 
     def _schedule_autosave(self) -> None:
+        self.autosave_status.setText("Alteracoes pendentes")
+        self.autosave_progress.setValue(0)
+        self._autosave_deadline_ms = UiLimits.AUTO_SAVE_INTERVAL_MS
+        self._autosave_progress_timer.start()
         self._autosave_timer.start()
+
+    def _update_autosave_progress(self) -> None:
+        if not self._autosave_timer.isActive():
+            self._autosave_progress_timer.stop()
+            return
+        remaining = self._autosave_timer.remainingTime()
+        total = max(UiLimits.AUTO_SAVE_INTERVAL_MS, 1)
+        value = max(0, min(100, int((total - remaining) * 100 / total)))
+        self.autosave_progress.setValue(value)
 
     def _delete(self) -> None:
         if self._selected_entry is None:

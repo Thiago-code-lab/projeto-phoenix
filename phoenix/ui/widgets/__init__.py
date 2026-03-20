@@ -10,6 +10,13 @@ from .sparkline import SparklineWidget
 from .stat_card import StatCard
 from .table_widget import DataTableWidget
 from .tag_input import TagInputWidget
+from .validated_fields import (
+    FormValidator,
+    ValidatedComboBox,
+    ValidatedDateEdit,
+    ValidatedLineEdit,
+    ValidatedSpinBox,
+)
 
 __all__ = [
     "CardWidget",
@@ -24,4 +31,9 @@ __all__ = [
     "StatCard",
     "DataTableWidget",
     "TagInputWidget",
+    "ValidatedLineEdit",
+    "ValidatedDateEdit",
+    "ValidatedSpinBox",
+    "ValidatedComboBox",
+    "FormValidator",
 ]

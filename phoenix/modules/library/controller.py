@@ -4,11 +4,12 @@ from datetime import date
 
 from sqlalchemy import extract, func, select
 
-from phoenix.core.database import get_session
+from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import Book
 from phoenix.core.repository import Repository
 
 
+@db_operation_class
 class LibraryController:
     def get_all(self, status: str | None = None, genre: str | None = None, search: str | None = None) -> list[Book]:
         with get_session() as session:

@@ -6,12 +6,10 @@ from PyQt6.QtCore import QDate
 from PyQt6.QtGui import QKeySequence, QShortcut, QUndoCommand, QUndoStack
 from PyQt6.QtWidgets import (
     QComboBox,
-    QDateEdit,
     QFormLayout,
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QScrollArea,
     QStackedWidget,
@@ -25,6 +23,7 @@ from phoenix.modules.goals.controller import GoalsController
 from phoenix.modules.goals.widgets import CircularProgress, GoalCard, MilestoneRow, describe_timeline
 from phoenix.ui.widgets.confirm_dialog import ConfirmDialog
 from phoenix.ui.widgets.empty_state import EmptyState
+from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedDateEdit, ValidatedLineEdit, ValidatedSpinBox
 from phoenix.utils.constants import Events
 
 
@@ -100,39 +99,52 @@ class GoalsView(QWidget):
         detail_layout.setSpacing(12)
 
         form_grid = QGridLayout()
-        self.title_input = QLineEdit()
-        self.category_input = QLineEdit()
+        self.title_input = ValidatedLineEdit()
+        self.title_input.set_required(True)
+        self.title_input.setObjectName("goal_title")
+        self.category_input = ValidatedLineEdit()
+        self.category_input.setObjectName("goal_category")
         self.status_input = QComboBox()
         self.status_input.addItems(["active", "paused", "completed"])
-        self.start_input = QDateEdit()
-        self.start_input.setCalendarPopup(True)
+        self.start_input = ValidatedDateEdit()
         self.start_input.setDate(QDate.currentDate())
-        self.target_input = QDateEdit()
-        self.target_input.setCalendarPopup(True)
+        self.target_input = ValidatedDateEdit()
         self.target_input.setDate(QDate.currentDate().addMonths(1))
-        self.current_value_input = QLineEdit("0")
-        self.target_value_input = QLineEdit("100")
-        self.unit_input = QLineEdit()
-        self.color_input = QLineEdit("#6366f1")
+        self.current_value_input = ValidatedSpinBox()
+        self.current_value_input.setDecimals(2)
+        self.current_value_input.set_min_max(0, 1_000_000)
+        self.current_value_input.setObjectName("goal_current")
+        self.target_value_input = ValidatedSpinBox()
+        self.target_value_input.setDecimals(2)
+        self.target_value_input.set_min_max(0.01, 1_000_000)
+        self.target_value_input.set_required(True)
+        self.target_value_input.setValue(100)
+        self.target_value_input.setObjectName("goal_target")
+        self.unit_input = ValidatedLineEdit()
+        self.unit_input.setObjectName("goal_unit")
+        self.color_input = ValidatedLineEdit("#6366f1")
+        self.color_input.setObjectName("goal_color")
 
-        form_grid.addWidget(QLabel("Titulo"), 0, 0)
-        form_grid.addWidget(self.title_input, 0, 1)
-        form_grid.addWidget(QLabel("Categoria"), 1, 0)
-        form_grid.addWidget(self.category_input, 1, 1)
-        form_grid.addWidget(QLabel("Status"), 2, 0)
-        form_grid.addWidget(self.status_input, 2, 1)
-        form_grid.addWidget(QLabel("Inicio"), 3, 0)
-        form_grid.addWidget(self.start_input, 3, 1)
-        form_grid.addWidget(QLabel("Prazo"), 4, 0)
-        form_grid.addWidget(self.target_input, 4, 1)
-        form_grid.addWidget(QLabel("Atual"), 5, 0)
-        form_grid.addWidget(self.current_value_input, 5, 1)
-        form_grid.addWidget(QLabel("Meta"), 6, 0)
-        form_grid.addWidget(self.target_value_input, 6, 1)
-        form_grid.addWidget(QLabel("Unidade"), 7, 0)
-        form_grid.addWidget(self.unit_input, 7, 1)
-        form_grid.addWidget(QLabel("Cor"), 8, 0)
-        form_grid.addWidget(self.color_input, 8, 1)
+        def add_validated_row(base_row: int, label_text: str, widget: object) -> int:
+            form_grid.addWidget(QLabel(label_text), base_row, 0)
+            form_grid.addWidget(widget, base_row, 1)
+            if hasattr(widget, "error_label"):
+                form_grid.addWidget(widget.error_label, base_row + 1, 1)
+                return base_row + 2
+            return base_row + 1
+
+        row = 0
+        row = add_validated_row(row, "Titulo", self.title_input)
+        row = add_validated_row(row, "Categoria", self.category_input)
+        form_grid.addWidget(QLabel("Status"), row, 0)
+        form_grid.addWidget(self.status_input, row, 1)
+        row += 1
+        row = add_validated_row(row, "Inicio", self.start_input)
+        row = add_validated_row(row, "Prazo", self.target_input)
+        row = add_validated_row(row, "Atual", self.current_value_input)
+        row = add_validated_row(row, "Meta", self.target_value_input)
+        row = add_validated_row(row, "Unidade", self.unit_input)
+        add_validated_row(row, "Cor", self.color_input)
         detail_layout.addLayout(form_grid)
 
         self.progress_ring = CircularProgress()
@@ -140,10 +152,11 @@ class GoalsView(QWidget):
 
         detail_layout.addWidget(QLabel("Milestones"))
         milestone_form = QHBoxLayout()
-        self.milestone_title = QLineEdit()
+        self.milestone_title = ValidatedLineEdit()
+        self.milestone_title.set_required(True)
+        self.milestone_title.setObjectName("goal_milestone")
         self.milestone_title.setPlaceholderText("Novo milestone")
-        self.milestone_date = QDateEdit()
-        self.milestone_date.setCalendarPopup(True)
+        self.milestone_date = ValidatedDateEdit()
         self.milestone_date.setDate(QDate.currentDate())
         self.milestone_add = QPushButton("Adicionar")
         self.milestone_add.setObjectName("btn-secondary")
@@ -151,6 +164,7 @@ class GoalsView(QWidget):
         milestone_form.addWidget(self.milestone_date)
         milestone_form.addWidget(self.milestone_add)
         detail_layout.addLayout(milestone_form)
+        detail_layout.addWidget(self.milestone_title.error_label)
 
         self.milestones_wrapper = QWidget()
         self.milestones_layout = QVBoxLayout(self.milestones_wrapper)
@@ -172,6 +186,21 @@ class GoalsView(QWidget):
         detail_layout.addLayout(actions)
         content.addWidget(self.detail_card, 1)
 
+        self.form_validator = FormValidator(
+            [
+                self.title_input,
+                self.start_input,
+                self.target_input,
+                self.current_value_input,
+                self.target_value_input,
+                self.color_input,
+            ],
+            self,
+        )
+        self.form_validator.bind_submit_button(self.save_button)
+        self.milestone_validator = FormValidator([self.milestone_title, self.milestone_date], self)
+        self.milestone_validator.bind_submit_button(self.milestone_add)
+
     def _connect_signals(self) -> None:
         self.status_filter.currentTextChanged.connect(lambda _: self._load_data())
         self.category_filter.currentTextChanged.connect(lambda _: self._load_data())
@@ -180,6 +209,11 @@ class GoalsView(QWidget):
         self.save_button.clicked.connect(self._save_goal)
         self.delete_button.clicked.connect(self._delete_goal)
         self.milestone_add.clicked.connect(self._add_milestone)
+        self.title_input.textChanged.connect(lambda _: self.form_validator.is_valid())
+        self.current_value_input.valueChanged.connect(lambda _: self.form_validator.is_valid())
+        self.target_value_input.valueChanged.connect(lambda _: self.form_validator.is_valid())
+        self.color_input.textChanged.connect(lambda _: self.form_validator.is_valid())
+        self.milestone_title.textChanged.connect(lambda _: self.milestone_validator.is_valid())
 
     def _setup_shortcuts(self) -> None:
         QShortcut(QKeySequence("Ctrl+Z"), self, activated=self._undo_stack.undo)
@@ -238,8 +272,8 @@ class GoalsView(QWidget):
         self.status_input.setCurrentText(goal.status)
         self.start_input.setDate(QDate(goal.start_date.year, goal.start_date.month, goal.start_date.day) if goal.start_date else QDate.currentDate())
         self.target_input.setDate(QDate(goal.target_date.year, goal.target_date.month, goal.target_date.day) if goal.target_date else QDate.currentDate())
-        self.current_value_input.setText(str(goal.current_value))
-        self.target_value_input.setText(str(goal.target_value or 0.0))
+        self.target_value_input.setValue(goal.target_value or 0.0)
+        self.current_value_input.setValue(goal.current_value or 0.0)
         self.unit_input.setText(goal.unit or "")
         self.color_input.setText(goal.color or "#6366f1")
         ratio = (goal.current_value / goal.target_value) if goal.target_value and goal.target_value > 0 else 0.0
@@ -260,12 +294,14 @@ class GoalsView(QWidget):
         self.milestones_layout.addStretch(1)
 
     def _save_goal(self) -> None:
-        valid = True
-        valid &= self._validate_field(self.title_input, bool(self.title_input.text().strip()))
-        valid &= self._validate_field(self.current_value_input, self._is_number(self.current_value_input.text().strip()))
-        valid &= self._validate_field(self.target_value_input, self._is_number(self.target_value_input.text().strip()))
-        if not valid:
+        if not self.form_validator.is_valid():
             self.show_toast("Corrija os campos destacados.", kind="error")
+            return
+
+        if self.target_input.date().toPyDate() < self.start_input.date().toPyDate():
+            self.target_input._set_invalid("Prazo deve ser maior ou igual a data de inicio.")
+            self.show_toast("Corrija os campos destacados.", kind="error")
+            self.form_validator.is_valid()
             return
 
         payload = {
@@ -274,8 +310,8 @@ class GoalsView(QWidget):
             "status": self.status_input.currentText(),
             "start_date": self.start_input.date().toPyDate(),
             "target_date": self.target_input.date().toPyDate(),
-            "current_value": self.current_value_input.text().strip(),
-            "target_value": self.target_value_input.text().strip(),
+            "current_value": self.current_value_input.value(),
+            "target_value": self.target_value_input.value(),
             "unit": self.unit_input.text().strip(),
             "color": self.color_input.text().strip() or "#6366f1",
         }
@@ -332,7 +368,7 @@ class GoalsView(QWidget):
             self.show_toast("Selecione uma meta para adicionar milestone.", kind="warning")
             return
         title = self.milestone_title.text().strip()
-        if not self._validate_field(self.milestone_title, bool(title)):
+        if not self.milestone_validator.is_valid():
             self.show_toast("Informe um titulo para o milestone.", kind="error")
             return
         self.controller.add_milestone(
@@ -365,8 +401,8 @@ class GoalsView(QWidget):
         self.status_input.setCurrentText("active")
         self.start_input.setDate(QDate.currentDate())
         self.target_input.setDate(QDate.currentDate().addMonths(1))
-        self.current_value_input.setText("0")
-        self.target_value_input.setText("100")
+        self.current_value_input.setValue(0)
+        self.target_value_input.setValue(100)
         self.unit_input.clear()
         self.color_input.setText("#6366f1")
         self.progress_ring.set_ratio(0)
@@ -382,58 +418,9 @@ class GoalsView(QWidget):
         if self.event_bus is not None:
             self.event_bus.publish(Events.DATA_CHANGED, {"module": "goals"})
 
-    def _validate_field(self, field: QLineEdit, is_valid: bool) -> bool:
-        field.setProperty("invalid", not is_valid)
-        field.style().unpolish(field)
-        field.style().polish(field)
-        return is_valid
-
-    def _is_number(self, value: str) -> bool:
-        try:
-            float(value.replace(",", "."))
-            return True
-        except ValueError:
-            return False
-
     def _clear_layout(self, layout: QVBoxLayout) -> None:
         while layout.count():
             item = layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
-
-        self.cards_wrapper = QWidget()
-        self.cards_layout = QVBoxLayout(self.cards_wrapper)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(self.cards_wrapper)
-        content.addWidget(scroll, 1)
-        content.addWidget(MilestoneList(), 0)
-        layout.addLayout(content)
-
-        self.form.save_button.clicked.connect(self._save_goal)
-        self._reload()
-
-    def _reload(self) -> None:
-        while self.cards_layout.count():
-            item = self.cards_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-        goals = self.controller.list_goals()
-        if not goals:
-            self.cards_layout.addWidget(EmptyState("Sem goals", "Crie a primeira meta para comecar."))
-            return
-        for goal in goals:
-            self.cards_layout.addWidget(GoalCard(goal.title, goal.category or "Sem categoria", f"{goal.current_value}/{goal.target_value or 0}"))
-
-    def _save_goal(self) -> None:
-        title = self.form.title_input.text().strip()
-        category = self.form.category_input.text().strip() or "geral"
-        target = float(self.form.target_input.text().strip() or "0")
-        if title:
-            self.controller.create_goal(title, category, target)
-            self.form.title_input.clear()
-            self.form.category_input.clear()
-            self.form.target_input.clear()
-            self._reload()
