@@ -7,6 +7,7 @@ from sqlalchemy import select
 from phoenix.core.cache import LRUCache
 from phoenix.core.database import db_operation_class, get_session
 from phoenix.core.models import Habit, HabitLog
+from phoenix.core.native_bridge import calculate_heatmap, calculate_streak, longest_streak
 from phoenix.core.repository import Repository
 
 
@@ -75,6 +76,10 @@ class HabitsController:
                 result = repository.create(habit_id=habit_id, date=today, completed=completed, note=note or None)
             else:
                 result = repository.update(existing, completed=completed, note=note or None)
+            if completed:
+                from phoenix.core.achievements.engine import AchievementEngine
+
+                AchievementEngine(session).check("habit_check", {"habit_id": habit_id})
         self._streak_cache.invalidate(f"streak:{habit_id}:")
         self._streak_cache.invalidate(f"longest:{habit_id}:")
         return result
@@ -94,12 +99,8 @@ class HabitsController:
         cached = self._streak_cache.get(cache_key)
         if cached is not None:
             return cached
-        streak = 0
-        cursor = today
         completed_days = {log.date for log in self.get_logs_range(habit_id, today - timedelta(days=365), today) if log.completed}
-        while cursor in completed_days:
-            streak += 1
-            cursor -= timedelta(days=1)
+        streak = calculate_streak([d.isoformat() for d in completed_days])
         self._streak_cache.set(cache_key, streak)
         return streak
 
@@ -110,17 +111,8 @@ class HabitsController:
         if cached is not None:
             return cached
         logs = self.get_logs_range(habit_id, today - timedelta(days=365), today)
-        completed = sorted([log.date for log in logs if log.completed])
-        if not completed:
-            return 0
-        longest = 1
-        current = 1
-        for idx in range(1, len(completed)):
-            if completed[idx] == completed[idx - 1] + timedelta(days=1):
-                current += 1
-                longest = max(longest, current)
-            else:
-                current = 1
+        completed = [log.date.isoformat() for log in logs if log.completed]
+        longest = longest_streak(completed)
         self._streak_cache.set(cache_key, longest)
         return longest
 
@@ -140,10 +132,16 @@ class HabitsController:
             logs = session.scalars(
                 select(HabitLog).where(HabitLog.date >= start_date, HabitLog.date <= end_date, HabitLog.completed.is_(True))
             ).all()
-            completed_by_day: dict[date, int] = {}
-            for log in logs:
-                completed_by_day[log.date] = completed_by_day.get(log.date, 0) + 1
-            return {day: min(value / total, 1.0) for day, value in completed_by_day.items()}
+            date_strings = [log.date.isoformat() for log in logs]
+            year_map = calculate_heatmap(date_strings, end_date.year)
+            year_start = date(end_date.year, 1, 1)
+            heatmap: dict[date, float] = {}
+            for idx, intensity in enumerate(year_map):
+                day = year_start + timedelta(days=idx)
+                if day < start_date or day > end_date:
+                    continue
+                heatmap[day] = min((intensity / max(total, 1)), 1.0)
+            return heatmap
 
     def get_today_summary(self) -> dict:
         habits = self.get_all(active_only=True)

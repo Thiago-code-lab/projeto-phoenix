@@ -8,8 +8,9 @@ Este modulo centraliza validacao inline e agregacao por formulario.
 from collections.abc import Callable
 from datetime import date
 
-from PyQt6.QtCore import QObject, QDate, pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QDateEdit, QDoubleSpinBox, QLabel, QLineEdit, QPushButton
+from PyQt6.QtCore import QEasingCurve, QObject, QPropertyAnimation, pyqtSignal
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QComboBox, QDateEdit, QDoubleSpinBox, QGraphicsDropShadowEffect, QLabel, QLineEdit, QPushButton
 
 ValidationRule = Callable[[object], tuple[bool, str]]
 
@@ -75,6 +76,7 @@ class _FieldValidationMixin:
         self._error_message = message
         self.error_label.setText(message)
         self.setProperty("invalid", True)
+        self.setProperty("error", True)
         self.style().unpolish(self)
         self.style().polish(self)
 
@@ -83,6 +85,7 @@ class _FieldValidationMixin:
         self._error_message = ""
         self.error_label.setText("")
         self.setProperty("invalid", False)
+        self.setProperty("error", False)
         self.style().unpolish(self)
         self.style().polish(self)
 
@@ -93,10 +96,40 @@ class ValidatedLineEdit(QLineEdit, _FieldValidationMixin):
     def __init__(self, text: str = "") -> None:
         super().__init__(text)
         self._init_validation()
+        self._focus_effect = QGraphicsDropShadowEffect(self)
+        self._focus_effect.setColor(QColor(230, 126, 34, 102))
+        self._focus_effect.setBlurRadius(0)
+        self._focus_effect.setOffset(0, 0)
+        self.setGraphicsEffect(self._focus_effect)
+
+        self._focus_in = QPropertyAnimation(self._focus_effect, b"blurRadius", self)
+        self._focus_in.setDuration(150)
+        self._focus_in.setStartValue(0)
+        self._focus_in.setEndValue(12)
+        self._focus_in.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        self._focus_out = QPropertyAnimation(self._focus_effect, b"blurRadius", self)
+        self._focus_out.setDuration(150)
+        self._focus_out.setStartValue(12)
+        self._focus_out.setEndValue(0)
+        self._focus_out.setEasingCurve(QEasingCurve.Type.OutCubic)
+
         self.editingFinished.connect(self.validate)
 
     def _value_for_validation(self) -> object:
         return self.text().strip()
+
+    def focusInEvent(self, event) -> None:  # type: ignore[override]
+        self._focus_out.stop()
+        self._focus_in.setStartValue(self._focus_effect.blurRadius())
+        self._focus_in.start()
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event) -> None:  # type: ignore[override]
+        self._focus_in.stop()
+        self._focus_out.setStartValue(self._focus_effect.blurRadius())
+        self._focus_out.start()
+        super().focusOutEvent(event)
 
 
 class ValidatedDateEdit(QDateEdit, _FieldValidationMixin):

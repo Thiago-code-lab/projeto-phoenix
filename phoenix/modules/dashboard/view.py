@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PyQt6.QtGui import QShowEvent
-from PyQt6.QtWidgets import QCheckBox, QGraphicsOpacityEffect, QGridLayout, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QCheckBox, QGraphicsOpacityEffect, QGridLayout, QListWidget, QListWidgetItem, QVBoxLayout, QWidget, QLabel
 
 import pyqtgraph as pg
 
@@ -10,7 +10,10 @@ from phoenix.modules.dashboard.controller import DashboardController
 from phoenix.core.events import EventBus
 from phoenix.ui.widgets.chart_widget import ChartWidget
 from phoenix.ui.widgets.card import CardWidget
-from phoenix.ui.widgets.stat_card import StatCard
+from phoenix.ui.widgets.gradient_progress import GradientProgressBar
+from phoenix.ui.widgets.metric_card import MetricCard
+from phoenix.ui.widgets.section_header import SectionHeader
+from phoenix.ui.widgets.streak_badge import StreakBadge
 from phoenix.utils.constants import Events
 
 
@@ -20,20 +23,42 @@ class DashboardView(QWidget):
         self.controller = DashboardController()
         self.event_bus = event_bus
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(18)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+
+        layout.addWidget(SectionHeader("Hoje"))
 
         self.stats_grid = QGridLayout()
-        self.stats_grid.setSpacing(16)
+        self.stats_grid.setSpacing(12)
         layout.addLayout(self.stats_grid)
 
-        self.goal_card = StatCard("Metas ativas", "0", "+0% concluidas")
-        self.balance_card = StatCard("Saldo total", "R$ 0,00", "+0")
-        self.streak_card = StatCard("Melhor streak", "0 dias", "rotina ativa")
-        self.focus_card = StatCard("Foco na semana", "0", "sessoes concluidas")
+        self.goal_card = MetricCard("Metas ativas", "0", "◎")
+        self.balance_card = MetricCard("Saldo total", "R$ 0,00", "◈")
+        self.streak_card = MetricCard("Melhor streak", "0 dias", "🔥")
+        self.focus_card = MetricCard("Foco na semana", "0", "◔")
         self.stat_cards = [self.goal_card, self.balance_card, self.streak_card, self.focus_card]
         for index, card in enumerate(self.stat_cards):
             self.stats_grid.addWidget(card, 0, index)
+
+        self.dashboard_streak = StreakBadge(0)
+        self.stats_grid.addWidget(self.dashboard_streak, 1, 0, 1, 2)
+
+        progress_container = QWidget()
+        progress_layout = QVBoxLayout(progress_container)
+        progress_layout.setContentsMargins(0, 0, 0, 0)
+        progress_layout.setSpacing(8)
+        progress_layout.addWidget(QLabel("Hoje"))
+        self.today_progress = GradientProgressBar()
+        progress_layout.addWidget(self.today_progress)
+        progress_layout.addWidget(QLabel("Esta semana"))
+        self.week_progress = GradientProgressBar()
+        progress_layout.addWidget(self.week_progress)
+        progress_layout.addWidget(QLabel("Metas"))
+        self.goals_progress = GradientProgressBar()
+        progress_layout.addWidget(self.goals_progress)
+        self.stats_grid.addWidget(progress_container, 1, 2, 1, 2)
+
+        layout.addWidget(SectionHeader("Esta semana"))
 
         self.finance_chart = CardWidget("Receitas vs despesas")
         self.finance_chart_view = ChartWidget()
@@ -41,12 +66,12 @@ class DashboardView(QWidget):
 
         self.mood_chart = CardWidget("Humor e energia")
         self.mood_plot = pg.PlotWidget()
-        self.mood_plot.setBackground("#18181b")
+        self.mood_plot.setBackground("#161616")
         self.mood_chart.layout.addWidget(self.mood_plot)
 
         self.productivity_chart = CardWidget("Produtividade semanal")
         self.productivity_plot = pg.PlotWidget()
-        self.productivity_plot.setBackground("#18181b")
+        self.productivity_plot.setBackground("#161616")
         self.productivity_chart.layout.addWidget(self.productivity_plot)
 
         charts_grid = QGridLayout()
@@ -55,6 +80,8 @@ class DashboardView(QWidget):
         charts_grid.addWidget(self.mood_chart, 0, 1)
         charts_grid.addWidget(self.productivity_chart, 1, 0, 1, 2)
         layout.addLayout(charts_grid)
+
+        layout.addWidget(SectionHeader("Metas"))
 
         self.upcoming_card = CardWidget("Proximas metas")
         self.upcoming_list = QListWidget()
@@ -95,11 +122,19 @@ class DashboardView(QWidget):
 
     def refresh(self) -> None:
         summary = self.controller.summary()
-        self.goal_card.update_values(str(summary["goals_active"]), f"+{summary['goals_completed_pct']}% concluidas")
+        self.goal_card.set_value(str(summary["goals_active"]))
+        self.goal_card.set_sparkline([max(0, summary["goals_active"] - 2), summary["goals_active"] - 1, summary["goals_active"], summary["goals_active"] + 1, summary["goals_active"] + 2])
         balance = float(summary["balance"])
-        self.balance_card.update_values(f"R$ {balance:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), "+contas e fluxo")
-        self.streak_card.update_values(f"{summary['global_streak']} dias", f"melhor: {summary['best_streak']} dias")
-        self.focus_card.update_values(str(summary["focus_week"]), "sessoes na semana")
+        self.balance_card.set_value(f"R$ {balance:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        self.balance_card.set_sparkline([balance * 0.95, balance * 0.98, balance, balance * 1.02, balance * 1.04])
+        self.streak_card.set_value(f"{summary['global_streak']} dias")
+        self.streak_card.set_sparkline([0, summary["best_streak"] * 0.4, summary["best_streak"] * 0.7, summary["best_streak"] * 0.9, summary["best_streak"]])
+        self.focus_card.set_value(str(summary["focus_week"]))
+        self.focus_card.set_sparkline([max(0, summary["focus_week"] - 3), max(0, summary["focus_week"] - 2), max(0, summary["focus_week"] - 1), summary["focus_week"], summary["focus_week"] + 1])
+        self.dashboard_streak.set_days(int(summary["global_streak"]))
+        self.today_progress.setValue(min(100, int((summary["global_streak"] / max(summary["best_streak"], 1)) * 100)))
+        self.week_progress.setValue(min(100, int(summary["focus_week"] * 10)))
+        self.goals_progress.setValue(int(summary["goals_completed_pct"]))
 
         labels, incomes, expenses = self.controller.monthly_cash_flow_last_six_months()
         self.finance_chart_view.plot_grouped_bar(
@@ -113,17 +148,19 @@ class DashboardView(QWidget):
         mood_labels, mood_values, energy_values = self.controller.mood_energy_last_30_days()
         self.mood_plot.clear()
         self.mood_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.mood_plot.getAxis("left").setTextPen("#a1a1aa")
-        self.mood_plot.getAxis("bottom").setTextPen("#71717a")
-        self.mood_plot.plot(mood_values, pen=pg.mkPen("#6366f1", width=2), name="Humor")
-        self.mood_plot.plot(energy_values, pen=pg.mkPen("#10b981", width=2), name="Energia")
+        self.mood_plot.getAxis("left").setTextPen("#AAAAAA")
+        self.mood_plot.getAxis("bottom").setTextPen("#AAAAAA")
+        self.mood_plot.plot(mood_values, pen=pg.mkPen(color="#E67E22", width=2), name="Humor")
+        self.mood_plot.plot(energy_values, pen=pg.mkPen(color="#E67E22", width=2), name="Energia")
         ticks = [(index, label) for index, label in enumerate(mood_labels) if index % 5 == 0]
         self.mood_plot.getAxis("bottom").setTicks([ticks])
 
         productivity_labels, productivity_values = self.controller.weekly_productivity()
         self.productivity_plot.clear()
         self.productivity_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.productivity_plot.plot(productivity_values, pen=pg.mkPen("#f59e0b", width=3), symbol="o", symbolSize=6)
+        self.productivity_plot.getAxis("left").setTextPen("#AAAAAA")
+        self.productivity_plot.getAxis("bottom").setTextPen("#AAAAAA")
+        self.productivity_plot.plot(productivity_values, pen=pg.mkPen(color="#E67E22", width=2), symbol="o", symbolSize=6)
         p_ticks = [(index, label) for index, label in enumerate(productivity_labels)]
         self.productivity_plot.getAxis("bottom").setTicks([p_ticks])
 
@@ -185,6 +222,9 @@ class DashboardView(QWidget):
                 self.milestones_card,
             ]
         ):
+            existing_effect = widget.graphicsEffect()
+            if existing_effect is not None:
+                continue
             effect = QGraphicsOpacityEffect(widget)
             widget.setGraphicsEffect(effect)
             animation = QPropertyAnimation(effect, b"opacity", self)

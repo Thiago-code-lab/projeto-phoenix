@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 from phoenix.core.events import EventBus
 from phoenix.modules.projects.controller import ProjectsController
 from phoenix.modules.projects.widgets import KanbanBoard
+from phoenix.ui.widgets.gantt_widget import GanttWidget
 from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedDateEdit, ValidatedLineEdit
 from phoenix.utils.constants import Events
 
@@ -40,7 +41,7 @@ class ProjectsView(QWidget):
         self.new_task_btn = QPushButton("+ Nova Tarefa")
         self.new_task_btn.setObjectName("btn-primary")
         self.mode_selector = QComboBox()
-        self.mode_selector.addItems(["Kanban", "Lista"])
+        self.mode_selector.addItems(["Kanban", "Lista", "Gantt"])
         controls.addWidget(QLabel("Projeto"))
         controls.addWidget(self.project_selector)
         controls.addWidget(self.new_project_btn)
@@ -54,8 +55,10 @@ class ProjectsView(QWidget):
         self.board.taskMoved.connect(self._move_task)
         self.list_table = QTableWidget(0, 6)
         self.list_table.setHorizontalHeaderLabels(["ID", "Titulo", "Status", "Prioridade", "Prazo", "Projeto"])
+        self.gantt = GanttWidget()
         self.mode_stack.addWidget(self.board)
         self.mode_stack.addWidget(self.list_table)
+        self.mode_stack.addWidget(self.gantt)
         layout.addWidget(self.mode_stack, 1)
 
         self.project_selector.currentIndexChanged.connect(self._on_project_changed)
@@ -100,6 +103,7 @@ class ProjectsView(QWidget):
             self.list_table.setItem(row, 3, QTableWidgetItem(task.priority))
             self.list_table.setItem(row, 4, QTableWidgetItem(task.due_date.strftime("%d/%m/%Y") if task.due_date else "-"))
             self.list_table.setItem(row, 5, QTableWidgetItem(project_name))
+        self.gantt.set_tasks(tasks)
 
     def _on_project_changed(self) -> None:
         if self.project_selector.count() == 0:
@@ -109,7 +113,8 @@ class ProjectsView(QWidget):
         self._reload_tasks()
 
     def _toggle_mode(self) -> None:
-        self.mode_stack.setCurrentIndex(0 if self.mode_selector.currentText() == "Kanban" else 1)
+        mapping = {"Kanban": 0, "Lista": 1, "Gantt": 2}
+        self.mode_stack.setCurrentIndex(mapping.get(self.mode_selector.currentText(), 0))
 
     def _create_project(self) -> None:
         dialog = QDialog(self)

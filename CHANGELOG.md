@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-03-20
+
+### feat:
+- baseline Phoenix 3.0 iniciada com versao de pacote em 3.0.0.
+- sincronizada constante global de versao em AppDefaults.VERSION.
+- README atualizado para refletir fase Phoenix 3.0.
+- criado roadmap inicial em docs/ROADMAP_3_0.md.
+- bloco 1: criado native bridge com fallback Python e integracao em habitos + command palette.
+- bloco 2: criado modulo assistant com backend ollama/transformers/rule-based e painel dock (Ctrl+A).
+- bloco 3: adicionados modelos de conquistas, sprint e insights; migration 0004 criada; modulo Conquistas integrado.
+- bloco 4: adicionados system tray e scheduler de lembretes com quick actions.
+- bloco 5: modulo Diario reescrito com editor markdown, preview e mood tracker.
+- bloco 6: adicionada view Gantt no modulo Projetos.
+- bloco 7: modulo Analytics com radar chart e geracao de relatorio PDF.
+- bloco 8: multi-perfil com ProfileManager, selecao de perfil e switch de banco.
+- bloco 9: servidor web local implementado em phoenix/web/server.py com fallback stdlib quando FastAPI/Uvicorn nao estao disponiveis.
+- bloco 10: i18n basico, dev_tools expandidos e novos testes para native/assistant/analytics/achievements.
+
+### pending:
+- bloco Rust (phoenix_native) adiado: rustc nao disponivel no ambiente atual, fallback Python ativado via phoenix/core/native_bridge.py.
+- backend FastAPI permanece opcional; quando ausente, o bloco web opera com fallback stdlib.
+
 ## 2026-03-19
 
 ### perf:

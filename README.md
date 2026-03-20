@@ -1,6 +1,8 @@
-# Projeto Phoenix 2.0
+# Projeto Phoenix 3.0
 
 Aplicacao desktop local-first para gestao pessoal completa, baseada em PyQt6 + SQLAlchemy + SQLite.
+
+Status atual: baseline Phoenix 3.0 inicializada (Bloco 0), com foco em estabilidade e compatibilidade retroativa.
 
 ## Features principais
 
@@ -17,7 +19,7 @@ Aplicacao desktop local-first para gestao pessoal completa, baseada em PyQt6 + S
 
 ## Estrutura
 
-Estrutura principal atual do projeto Phoenix 2.0.
+Estrutura principal atual do projeto Phoenix 3.0.
 
 ```text
 projeto-phoenix/
@@ -45,7 +47,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Executar o Phoenix 2.0
+### 2. Executar o Phoenix 3.0
 
 Opcao A:
 
@@ -80,3 +82,10 @@ python -m pytest phoenix\tests -q
 - ReportLab
 - Dynaconf
 - pytest + pytest-qt
+
+## Roadmap 3.0 (resumo)
+
+- Bloco 0: baseline 3.0, versionamento e documentacao de direcao.
+- Proximos blocos: arquitetura modular avancada, assistente local e sync opcional.
+
+Detalhes em `docs/ROADMAP_3_0.md`.

@@ -1,0 +1,18 @@
+from __future__ import annotations
+
+from PyQt6.QtGui import QColor
+
+CRIMSON = "#C0392B"
+FIRE = "#E74C3C"
+EMBER = "#E67E22"
+AMBER = "#F39C12"
+ROOT_BG = "#0D0D0D"
+SURFACE = "#161616"
+ELEVATED = "#1E1E1E"
+BORDER = "#2A2A2A"
+TEXT_PRIMARY = "#F0F0F0"
+TEXT_SECONDARY = "#AAAAAA"
+TEXT_HINT = "#666666"
+
+GLOW_CRIMSON = QColor(192, 57, 43, 120)
+GLOW_EMBER = QColor(230, 126, 34, 90)

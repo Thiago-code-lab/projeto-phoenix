@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from difflib import SequenceMatcher
 from typing import Callable
 
-from PyQt6.QtCore import QEasingCurve, QSize, QPropertyAnimation, QTimer, Qt
-from PyQt6.QtGui import QKeySequence, QShortcut, QUndoStack
+from PyQt6.QtCore import QEasingCurve, QEvent, QPoint, QSize, QPropertyAnimation, QSequentialAnimationGroup, QTimer, Qt
+from PyQt6.QtGui import QColor, QKeySequence, QShortcut, QUndoStack
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QHBoxLayout,
+    QGraphicsDropShadowEffect,
     QLabel,
+    QLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -24,13 +25,52 @@ from PyQt6.QtWidgets import (
 
 from phoenix import __version__
 from phoenix.core.cache import MemoryCache
+from phoenix.core.database import SessionLocal
 from phoenix.core.database import database_size_mb
 from phoenix.core.events import EventBus
+from phoenix.core.native_bridge import fuzzy_search
+from phoenix.core.notifications.scheduler import ReminderScheduler
+from phoenix.core.notifications.system_tray import PhoenixTray
+from phoenix.modules.assistant.view import PhoenixAssistantPanel
 from phoenix.ui.header import Header
 from phoenix.ui.sidebar import Sidebar
-from phoenix.ui.theme import ThemeManager
+from phoenix.ui.theme import ThemeManager, apply_theme
 from phoenix.ui.widgets.notification import ToastNotification
 from phoenix.utils.constants import AppDefaults, Events
+
+
+class PrimaryButtonRippleFilter(QWidget):
+    """Event filter para ripple simples em botoes primarios."""
+
+    def eventFilter(self, watched: object, event: QEvent) -> bool:
+        if isinstance(watched, QPushButton) and watched.objectName() == "btn-primary":
+            if event.type() == QEvent.Type.MouseButtonPress:
+                self._run_ripple(watched, event.position().toPoint())
+        return super().eventFilter(watched, event)
+
+    def _run_ripple(self, button: QPushButton, center: QPoint) -> None:
+        ripple = QLabel(button)
+        ripple.setStyleSheet("background: rgba(255,255,255,0.3); border-radius: 30px;")
+        ripple.setFixedSize(0, 0)
+        ripple.move(center.x(), center.y())
+        ripple.show()
+
+        grow = QPropertyAnimation(ripple, b"geometry", button)
+        grow.setDuration(220)
+        grow.setStartValue(ripple.geometry())
+        grow.setEndValue(ripple.geometry().adjusted(-30, -30, 30, 30))
+        grow.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        fade = QPropertyAnimation(ripple, b"windowOpacity", button)
+        fade.setDuration(220)
+        fade.setStartValue(0.3)
+        fade.setEndValue(0.0)
+
+        group = QSequentialAnimationGroup(button)
+        group.addAnimation(grow)
+        group.addAnimation(fade)
+        group.finished.connect(ripple.deleteLater)
+        group.start()
 
 
 class SkeletonPage(QWidget):
@@ -84,21 +124,14 @@ class CommandPaletteDialog(QDialog):
         self.listing.itemActivated.connect(self._activate)
         self._refresh("")
 
-    def _score(self, query: str, text: str) -> float:
-        if not query:
-            return 1.0
-        query_norm = query.lower().strip()
-        text_norm = text.lower()
-        if query_norm in text_norm:
-            return 1.0 + (len(query_norm) / max(len(text_norm), 1))
-        return SequenceMatcher(None, query_norm, text_norm).ratio()
-
     def _refresh(self, query: str) -> None:
         self.listing.clear()
-        ranked = sorted(
-            ((self._score(query, label), index, label) for index, (label, _) in enumerate(self._actions)),
-            reverse=True,
-        )
+        labels = [label for label, _ in self._actions]
+        if query.strip():
+            ranked_native = fuzzy_search(query, labels, 20)
+            ranked = [(score, index, labels[index]) for index, score in ranked_native]
+        else:
+            ranked = [(1.0, index, label) for index, label in enumerate(labels[:20])]
         appended = 0
         for score, index, label in ranked[:20]:
             if query.strip() and score < 0.32:
@@ -141,17 +174,62 @@ class MainWindow(QMainWindow):
         self.module_factories: dict[str, Callable[[], QWidget]] = {}
         self.module_hints: dict[str, str] = {}
         self._animations: list[QPropertyAnimation] = []
+        self._transitioning = False
         self._last_saved = "-"
         self._db_usage_label = QLabel("DB: 0.00 MB")
         self._active_module_label = QLabel("Modulo: -")
         self._last_saved_label = QLabel("Ultimo salvamento: -")
+        self._sep_one = QLabel("│")
+        self._sep_two = QLabel("│")
+        self._ripple_filter = PrimaryButtonRippleFilter(self)
+        self._assistant_panel: PhoenixAssistantPanel | None = None
+        self._session = SessionLocal()
+        self._tray: PhoenixTray | None = None
+        self._scheduler: ReminderScheduler | None = None
 
         self._build_ui()
         self._bind_events()
         self._setup_shortcuts()
         self._setup_status_bar()
+        self._setup_assistant_panel()
+        self._setup_tray_and_scheduler()
         self._apply_theme()
+        self._install_ripple_effects()
         self.navigate_to(0)
+
+    def _setup_tray_and_scheduler(self) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        self._tray = PhoenixTray(self, app)
+        self._tray.show()
+        self._scheduler = ReminderScheduler(self._session, self)
+        self._scheduler.reminder_triggered.connect(self._on_reminder)
+
+    def _on_reminder(self, title: str, message: str) -> None:
+        if self._tray is not None:
+            self._tray.notify(title, message)
+        self.event_bus.publish(Events.SHOW_TOAST, {"message": f"[info] {title}: {message}"})
+
+    def show_settings(self) -> None:
+        if "settings" in self.module_keys:
+            self.navigate_to(self.module_keys.index("settings"))
+
+    def quick_action(self, action: str) -> None:
+        if action == "habit_check":
+            self.navigate_to(self.module_keys.index("habits"))
+        elif action == "new_transaction":
+            self.navigate_to(self.module_keys.index("finances"))
+        elif action == "start_focus":
+            self.navigate_to(self.module_keys.index("focus"))
+
+    def closeEvent(self, event) -> None:  # type: ignore[override]
+        if self._tray is None:
+            super().closeEvent(event)
+            return
+        event.ignore()
+        self.hide()
+        self._tray.notify("Phoenix", "Minimizado para a bandeja do sistema.")
 
     def _build_ui(self) -> None:
         central = QWidget()
@@ -173,10 +251,17 @@ class MainWindow(QMainWindow):
             ("focus", "Foco"),
             ("notes", "Notas"),
             ("reviews", "Revisoes"),
+            ("achievements", "Conquistas"),
+            ("analytics", "Analytics"),
             ("settings", "Configuracoes"),
         ]
         self.sidebar = Sidebar(sidebar_modules, self)
         self.sidebar.navigate.connect(self.navigate_to)
+        sidebar_shadow = QGraphicsDropShadowEffect(self.sidebar)
+        sidebar_shadow.setBlurRadius(32)
+        sidebar_shadow.setColor(QColor(0, 0, 0, 180))
+        sidebar_shadow.setOffset(4, 0)
+        self.sidebar.setGraphicsEffect(sidebar_shadow)
         root_layout.addWidget(self.sidebar)
 
         content = QWidget()
@@ -210,6 +295,8 @@ class MainWindow(QMainWindow):
             "focus",
             "notes",
             "reviews",
+            "achievements",
+            "analytics",
             "settings",
         ]
         self.modules = [
@@ -224,6 +311,8 @@ class MainWindow(QMainWindow):
             ("Foco", None),
             ("Notas", None),
             ("Revisoes", None),
+            ("Conquistas", None),
+            ("Analytics", None),
             ("Configuracoes", None),
         ]
         self.contexts = [
@@ -238,6 +327,8 @@ class MainWindow(QMainWindow):
             ("Foco", "Pomodoro e sessoes profundas"),
             ("Notas", "Base de conhecimento local e backlinks"),
             ("Revisoes", "Radar de vida e historico de ciclos"),
+            ("Conquistas", "Progresso, niveis e badges desbloqueadas"),
+            ("Analytics", "Pontuacao de vida e relatorio consolidado"),
             ("Configuracoes", "Preferencias, backup e dados"),
         ]
         self.module_hints = {
@@ -252,6 +343,8 @@ class MainWindow(QMainWindow):
             "focus": "Escolha uma tarefa e inicie um ciclo de foco 25/50/90.",
             "notes": "Capture ideias e relacione notas com tags.",
             "reviews": "Faça uma revisao semanal para ajustar sua rota.",
+            "achievements": "Acompanhe seu XP, nivel e conquistas desbloqueadas.",
+            "analytics": "Avalie seu score de vida e gere relatorios mensais.",
             "settings": "Personalize tema, som e backup do aplicativo.",
         }
         self.module_factories = {
@@ -266,13 +359,15 @@ class MainWindow(QMainWindow):
             "focus": self._load_focus,
             "notes": self._load_notes,
             "reviews": self._load_reviews,
+            "achievements": self._load_achievements,
+            "analytics": self._load_analytics,
             "settings": self._load_settings,
         }
         for _ in self.modules:
             self.stack.addWidget(SkeletonPage())
 
     def navigate_to(self, index: int) -> None:
-        if not 0 <= index < len(self.modules):
+        if not 0 <= index < len(self.modules) or self._transitioning:
             return
         previous_index = self.stack.currentIndex()
         widget = self._ensure_module_loaded(index)
@@ -281,9 +376,10 @@ class MainWindow(QMainWindow):
             self.stack.removeWidget(previous)
             previous.deleteLater()
             self.stack.insertWidget(index, widget)
-        self.stack.setCurrentIndex(index)
         if previous_index != index:
-            self._animate_current_module(widget)
+            self._cross_dissolve_to(index)
+        else:
+            self.stack.setCurrentIndex(index)
         title, subtitle = self.contexts[index]
         self.header.set_context(title, subtitle)
         module_key = self.module_keys[index]
@@ -291,6 +387,8 @@ class MainWindow(QMainWindow):
         self.sidebar.set_active(index)
         self._active_module_label.setText(f"Modulo: {title}")
         self._refresh_db_usage()
+        self._apply_module_defaults(widget)
+        self._install_ripple_effects(widget)
         if hasattr(widget, "refresh"):
             widget.refresh()
 
@@ -300,7 +398,21 @@ class MainWindow(QMainWindow):
             shortcut.activated.connect(lambda idx=index: self.navigate_to(idx))
         QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.event_bus.publish(Events.SHOW_SHORTCUTS, {}))
         QShortcut(QKeySequence("Ctrl+P"), self, activated=self._open_command_palette)
+        QShortcut(QKeySequence("Ctrl+A"), self, activated=self._toggle_assistant_panel)
         QShortcut(QKeySequence("F1"), self, activated=lambda: self.event_bus.publish(Events.SHOW_SHORTCUTS, {}))
+
+    def _setup_assistant_panel(self) -> None:
+        self._assistant_panel = PhoenixAssistantPanel(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._assistant_panel)
+        self._assistant_panel.hide()
+
+    def _toggle_assistant_panel(self) -> None:
+        if self._assistant_panel is None:
+            return
+        if self._assistant_panel.isVisible():
+            self._assistant_panel.hide()
+            return
+        self._assistant_panel.show()
 
     def _apply_theme(self) -> None:
         app = QApplication.instance()
@@ -337,6 +449,7 @@ class MainWindow(QMainWindow):
 
     def _show_shortcuts(self) -> None:
         dialog = QDialog(self)
+        apply_theme(dialog)
         dialog.setWindowTitle("Atalhos")
         layout = QVBoxLayout(dialog)
         layout.addWidget(QLabel("Ctrl+1..9: navegar entre modulos"))
@@ -345,6 +458,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("F1: ajuda rapida"))
         layout.addWidget(QLabel("Dica: passe o mouse sobre itens laterais para ver contexto"))
         close_button = QPushButton("Fechar")
+        close_button.setObjectName("btn-ghost")
         close_button.clicked.connect(dialog.accept)
         layout.addWidget(close_button)
         dialog.resize(420, 220)
@@ -381,9 +495,9 @@ class MainWindow(QMainWindow):
         return HealthView()
 
     def _load_journal(self) -> QWidget:
-        from phoenix.modules.journal.view import JournalView
+        from phoenix.modules.diary.view import DiaryView
 
-        return JournalView()
+        return DiaryView(self.event_bus)
 
     def _load_projects(self) -> QWidget:
         from phoenix.modules.projects.view import ProjectsView
@@ -410,6 +524,16 @@ class MainWindow(QMainWindow):
 
         return SettingsView()
 
+    def _load_analytics(self) -> QWidget:
+        from phoenix.modules.analytics.view import AnalyticsView
+
+        return AnalyticsView()
+
+    def _load_achievements(self) -> QWidget:
+        from phoenix.modules.achievements.view import AchievementsView
+
+        return AchievementsView()
+
     def _toggle_theme(self) -> None:
         app = QApplication.instance()
         if app is not None:
@@ -418,8 +542,12 @@ class MainWindow(QMainWindow):
 
     def _setup_status_bar(self) -> None:
         bar = self.statusBar()
+        self._sep_one.setStyleSheet("color: #2A2A2A;")
+        self._sep_two.setStyleSheet("color: #2A2A2A;")
         bar.addPermanentWidget(self._active_module_label)
+        bar.addPermanentWidget(self._sep_one)
         bar.addPermanentWidget(self._last_saved_label)
+        bar.addPermanentWidget(self._sep_two)
         bar.addPermanentWidget(self._db_usage_label)
         self._refresh_db_usage()
         self._status_timer = QTimer(self)
@@ -448,31 +576,92 @@ class MainWindow(QMainWindow):
         dialog = CommandPaletteDialog(actions, self)
         dialog.exec()
 
-    def _animate_current_module(self, widget: QWidget) -> None:
-        effect = QGraphicsOpacityEffect(widget)
-        widget.setGraphicsEffect(effect)
-        animation = QPropertyAnimation(effect, b"opacity", self)
-        animation.setDuration(220)
-        animation.setStartValue(0.0)
-        animation.setEndValue(1.0)
-        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+    def _cross_dissolve_to(self, next_index: int) -> None:
+        current_widget = self.stack.currentWidget()
+        if current_widget is None:
+            self.stack.setCurrentIndex(next_index)
+            return
 
-        def cleanup() -> None:
-            widget.setGraphicsEffect(None)
-            if animation in self._animations:
-                self._animations.remove(animation)
+        self._transitioning = True
+        out_effect = QGraphicsOpacityEffect(current_widget)
+        current_widget.setGraphicsEffect(out_effect)
+        fade_out = QPropertyAnimation(out_effect, b"opacity", self)
+        fade_out.setDuration(150)
+        fade_out.setStartValue(1.0)
+        fade_out.setEndValue(0.0)
+        fade_out.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        animation.finished.connect(cleanup)
-        self._animations.append(animation)
-        animation.start()
+        def on_out_finished() -> None:
+            current_widget.setGraphicsEffect(None)
+            self.stack.setCurrentIndex(next_index)
+            incoming = self.stack.currentWidget()
+            if incoming is None:
+                self._transitioning = False
+                return
+            in_effect = QGraphicsOpacityEffect(incoming)
+            incoming.setGraphicsEffect(in_effect)
+            fade_in = QPropertyAnimation(in_effect, b"opacity", self)
+            fade_in.setDuration(150)
+            fade_in.setStartValue(0.0)
+            fade_in.setEndValue(1.0)
+            fade_in.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            def on_in_finished() -> None:
+                incoming.setGraphicsEffect(None)
+                self._transitioning = False
+                if fade_in in self._animations:
+                    self._animations.remove(fade_in)
+
+            fade_in.finished.connect(on_in_finished)
+            self._animations.append(fade_in)
+            fade_in.start()
+
+        fade_out.finished.connect(on_out_finished)
+        self._animations.append(fade_out)
+        fade_out.start()
 
     def _show_about(self) -> None:
         dialog = QDialog(self)
+        apply_theme(dialog)
         dialog.setWindowTitle("Sobre")
         layout = QVBoxLayout(dialog)
         layout.addWidget(QLabel(f"Phoenix {__version__}"))
         layout.addWidget(QLabel("Aplicacao local-first para gestao pessoal."))
         close_button = QPushButton("Fechar")
+        close_button.setObjectName("btn-ghost")
         close_button.clicked.connect(dialog.accept)
         layout.addWidget(close_button)
         dialog.exec()
+
+    def _apply_module_defaults(self, root: QWidget) -> None:
+        for layout in root.findChildren(QLayout):
+            layout.setContentsMargins(20, 20, 20, 20)
+            layout.setSpacing(12)
+
+        for label in root.findChildren(QLabel):
+            text = label.text().strip()
+            if not text:
+                continue
+            if label.objectName():
+                continue
+            if len(text) <= 20 and text.isupper():
+                label.setObjectName("label-section")
+            elif len(text) <= 28 and any(ch.isalpha() for ch in text):
+                label.setObjectName("label-title")
+
+        for button in root.findChildren(QPushButton):
+            if button.objectName() in {"btn-primary", "btn-ghost", "btn-danger", "btn-flat", "btn-secondary"}:
+                continue
+            text = button.text().lower()
+            if any(word in text for word in ["excluir", "remover", "delet", "apagar"]):
+                button.setObjectName("btn-danger")
+            elif any(word in text for word in ["salvar", "novo", "criar", "adicionar", "iniciar", "ok"]):
+                button.setObjectName("btn-primary")
+            else:
+                button.setObjectName("btn-ghost")
+
+    def _install_ripple_effects(self, root: QWidget | None = None) -> None:
+        scope = root or self
+        for button in scope.findChildren(QPushButton):
+            if button.objectName() == "btn-primary":
+                button.installEventFilter(self._ripple_filter)

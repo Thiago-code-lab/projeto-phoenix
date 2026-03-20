@@ -12,10 +12,11 @@ class SparklineWidget(QWidget):
         self.plot = pg.PlotWidget()
         self.plot.hideAxis("left")
         self.plot.hideAxis("bottom")
-        self.plot.setBackground("transparent")
+        self.plot.setBackground("#161616")
+        self.plot.setMenuEnabled(False)
         layout.addWidget(self.plot)
         self.set_values(values or [1, 3, 2, 5, 4])
 
     def set_values(self, values: list[float]) -> None:
         self.plot.clear()
-        self.plot.plot(values, pen=pg.mkPen("#22c55e", width=2))
+        self.plot.plot(values, pen=pg.mkPen(color="#E67E22", width=2))

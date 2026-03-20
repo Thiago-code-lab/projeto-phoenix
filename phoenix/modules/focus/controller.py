@@ -60,6 +60,11 @@ class FocusController:
         with get_session() as session:
             return list(session.scalars(select(Task).where(Task.status != "done").order_by(Task.updated_at.desc())).all())
 
+    def get_available_tasks(self) -> list[Task]:
+        """Alias semântico para tarefas disponíveis no vínculo de foco."""
+
+        return self.list_active_tasks()
+
     def weekly_report(self) -> dict[str, object]:
         """Retorna horas totais da semana e distribuicao por projeto."""
 

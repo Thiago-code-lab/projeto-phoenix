@@ -7,14 +7,22 @@ Uso:
     python dev_tools.py seed_demo_data
     python dev_tools.py run_migrations
     python dev_tools.py check_health
+    python dev_tools.py build_native
+    python dev_tools.py check_warnings
+    python dev_tools.py profile_app
+    python dev_tools.py run_web_server
 """
 
 import argparse
+import cProfile
+import pstats
 import subprocess
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 from phoenix.core.database import DATABASE_PATH, SessionLocal, init_database, run_integrity_check
 from phoenix.core.models import FocusSession, Goal, Habit, Transaction
+from phoenix.web.server import run_server
 
 
 def reset_db() -> None:
@@ -85,13 +93,69 @@ def check_health() -> None:
     print("Banco integro (PRAGMA integrity_check = ok).")
 
 
+def build_native() -> None:
+    """Compila extensao Rust com maturin quando disponivel."""
+
+    native_dir = Path(__file__).resolve().parent / "phoenix_native"
+    if not native_dir.exists():
+        print("phoenix_native nao encontrado. Pule esta etapa por enquanto.")
+        return
+    try:
+        subprocess.run(["maturin", "develop", "--release"], cwd=str(native_dir), check=True)
+        print("Extensao nativa compilada com sucesso.")
+    except Exception as exc:  # noqa: BLE001
+        print(f"Aviso: falha ao compilar extensao nativa ({exc}). Fallback Python permanece ativo.")
+
+
+def check_warnings() -> None:
+    """Executa bootstrap do app tratando warnings como erro."""
+
+    subprocess.run(["python", "-W", "error", "-m", "phoenix.main"], check=False)
+
+
+def profile_app() -> None:
+    """Roda perfil simplificado de operacoes criticas e mostra top 10."""
+
+    profiler = cProfile.Profile()
+    profiler.enable()
+
+    init_database()
+    session = SessionLocal()
+    try:
+        session.query(Goal).count()
+        session.query(Habit).count()
+        session.query(Transaction).count()
+        session.query(FocusSession).count()
+    finally:
+        session.close()
+
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats("cumulative")
+    stats.print_stats(10)
+
+
+def run_web_server() -> None:
+    """Sobe API local (FastAPI quando disponivel, senão stdlib)."""
+
+    run_server(host="127.0.0.1", port=8765)
+
+
 def main() -> None:
     """Ponto de entrada para comandos utilitarios de desenvolvimento."""
 
     parser = argparse.ArgumentParser(description="Dev tools do Phoenix")
     parser.add_argument(
         "command",
-        choices=["reset_db", "seed_demo_data", "run_migrations", "check_health"],
+        choices=[
+            "reset_db",
+            "seed_demo_data",
+            "run_migrations",
+            "check_health",
+            "build_native",
+            "check_warnings",
+            "profile_app",
+            "run_web_server",
+        ],
         help="Comando a executar",
     )
     args = parser.parse_args()
@@ -101,6 +165,10 @@ def main() -> None:
         "seed_demo_data": seed_demo_data,
         "run_migrations": run_migrations,
         "check_health": check_health,
+        "build_native": build_native,
+        "check_warnings": check_warnings,
+        "profile_app": profile_app,
+        "run_web_server": run_web_server,
     }
     commands[args.command]()
 

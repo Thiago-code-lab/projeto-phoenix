@@ -107,6 +107,37 @@ def database_size_mb() -> float:
     return round(DATABASE_PATH.stat().st_size / (1024 * 1024), 2)
 
 
+def switch_database(db_path: str) -> None:
+    """Troca banco ativo em runtime e recria engine/session factory."""
+
+    global DATABASE_PATH, DATABASE_URL, engine, SessionLocal
+
+    DATABASE_PATH = Path(db_path).resolve()
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
+
+    engine.dispose()
+    engine = create_engine(
+        DATABASE_URL,
+        future=True,
+        echo=False,
+        connect_args={"check_same_thread": False},
+        poolclass=QueuePool,
+        pool_pre_ping=True,
+        pool_size=8,
+        max_overflow=16,
+        pool_recycle=1800,
+    )
+    SessionLocal = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+        class_=Session,
+    )
+    init_database()
+
+
 FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
 

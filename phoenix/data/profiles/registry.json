@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "name": "Padrao",
+    "color": "#E67E22",
+    "db_path": "phoenix\\data\\profiles\\padrao.db",
+    "pin_hash": null,
+    "created_at": "2026-03-20T14:04:16.561664"
+  }
+]

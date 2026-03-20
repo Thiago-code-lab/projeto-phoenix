@@ -1,0 +1,19 @@
+{
+  "app.title": "Phoenix",
+  "module.dashboard": "Dashboard",
+  "module.goals": "Metas",
+  "module.habits": "Habitos",
+  "module.finances": "Financas",
+  "module.library": "Biblioteca",
+  "module.health": "Saude",
+  "module.diary": "Diario",
+  "module.projects": "Projetos",
+  "module.focus": "Foco",
+  "module.notes": "Notas",
+  "module.reviews": "Revisoes",
+  "module.settings": "Configuracoes",
+  "module.achievements": "Conquistas",
+  "module.analytics": "Analytics",
+  "toast.saved": "Dados salvos com sucesso",
+  "toast.error": "Ocorreu um erro"
+}

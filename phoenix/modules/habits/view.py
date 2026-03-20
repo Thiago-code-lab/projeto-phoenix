@@ -20,9 +20,11 @@ from PyQt6.QtWidgets import (
 from phoenix.core.events import EventBus
 from phoenix.core.models import Habit
 from phoenix.modules.habits.controller import HabitsController
-from phoenix.modules.habits.widgets import HabitRow, HeatmapWidget, StreakBadge
+from phoenix.modules.habits.widgets import HabitRow
 from phoenix.ui.widgets.confirm_dialog import ConfirmDialog
 from phoenix.ui.widgets.empty_state import EmptyState
+from phoenix.ui.widgets.heatmap import HeatmapWidget
+from phoenix.ui.widgets.streak_badge import StreakBadge
 from phoenix.ui.widgets.validated_fields import FormValidator, ValidatedLineEdit
 from phoenix.utils.constants import Events
 
@@ -82,7 +84,9 @@ class HabitsView(QWidget):
         stats = QHBoxLayout()
         self.current_streak_label = StreakBadge(0)
         self.longest_streak_label = QLabel("Maior streak: 0")
+        self.longest_streak_label.setObjectName("label-muted")
         self.rate_label = QLabel("Taxa (30d): 0%")
+        self.rate_label.setObjectName("label-muted")
         stats.addWidget(self.current_streak_label)
         stats.addWidget(self.longest_streak_label)
         stats.addWidget(self.rate_label)
@@ -114,8 +118,10 @@ class HabitsView(QWidget):
         self.edit_button = QPushButton("Editar")
         self.archive_button = QPushButton("Arquivar")
         self.delete_button = QPushButton("Excluir")
+        self.edit_button.setObjectName("btn-ghost")
+        self.archive_button.setObjectName("btn-ghost")
+        self.delete_button.setObjectName("btn-danger")
         for button in [self.edit_button, self.archive_button, self.delete_button]:
-            button.setObjectName("btn-secondary")
             actions.addWidget(button)
         actions.addStretch(1)
         layout.addLayout(actions)
@@ -267,7 +273,7 @@ class HabitsView(QWidget):
 
     def _refresh_heatmap_stats(self) -> None:
         if self.habit_selector.count() == 0:
-            self.current_streak_label.setText("0 dias consecutivos")
+            self.current_streak_label.set_days(0)
             self.longest_streak_label.setText("Maior streak: 0")
             self.rate_label.setText("Taxa (30d): 0%")
             return
@@ -275,7 +281,7 @@ class HabitsView(QWidget):
         streak = self.controller.get_streak(habit_id)
         longest = self.controller.get_longest_streak(habit_id)
         rate = self.controller.get_completion_rate(habit_id, 30)
-        self.current_streak_label.setText(f"{streak} dias consecutivos")
+        self.current_streak_label.set_days(streak)
         self.longest_streak_label.setText(f"Maior streak: {longest}")
         self.rate_label.setText(f"Taxa (30d): {int(rate * 100)}%")
 

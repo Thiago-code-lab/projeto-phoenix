@@ -211,6 +211,8 @@ class JournalEntry(Base):
     title: Mapped[str | None] = mapped_column(String(300))
     content: Mapped[str] = mapped_column(Text, nullable=False)
     mood: Mapped[int | None] = mapped_column(Integer)
+    word_count: Mapped[int] = mapped_column(Integer, default=0)
+    template: Mapped[str | None] = mapped_column(String(50))
     tags: Mapped[list[str] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, index=True)
@@ -239,12 +241,30 @@ class Task(Base):
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), default="backlog", index=True)
     priority: Mapped[str] = mapped_column(String(10), default="medium")
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    start_date: Mapped[date | None] = mapped_column(Date)
     due_date: Mapped[date | None] = mapped_column(Date, index=True)
+    sprint_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sprints.id"), index=True)
+    depends_on: Mapped[int | None] = mapped_column(Integer, ForeignKey("tasks.id"), index=True)
+    time_logged: Mapped[int] = mapped_column(Integer, default=0)
     tags: Mapped[list[str] | None] = mapped_column(JSON)
     position: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, index=True)
     project: Mapped[Project | None] = relationship(back_populates="tasks")
+
+
+class Sprint(Base):
+    __tablename__ = "sprints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(140), nullable=False)
+    start_date: Mapped[date | None] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    goal: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="planned", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
 
 
 class FocusSession(Base):
@@ -294,3 +314,37 @@ class Review(Base):
     challenges: Mapped[str | None] = mapped_column(Text)
     intentions: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    icon: Mapped[str] = mapped_column(String(16), default="*")
+    category: Mapped[str] = mapped_column(String(40), index=True)
+    xp_reward: Mapped[int] = mapped_column(Integer, default=10)
+    rarity: Mapped[str] = mapped_column(String(20), default="common", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+
+
+class UserAchievement(Base):
+    __tablename__ = "user_achievements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    achievement_id: Mapped[int] = mapped_column(Integer, ForeignKey("achievements.id"), nullable=False, index=True)
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+    progress: Mapped[float] = mapped_column(Float, default=1.0)
+    notified: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+
+
+class AIInsight(Base):
+    __tablename__ = "ai_insights"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    type: Mapped[str] = mapped_column(String(20), index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+    dismissed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)

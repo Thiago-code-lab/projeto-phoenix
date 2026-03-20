@@ -1,18 +1,29 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-from PyQt6.QtCore import QDate
-from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QInputDialog, QPushButton, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from phoenix.core.events import EventBus
 from phoenix.modules.finances.controller import FinancesController
-from phoenix.modules.finances.widgets import BudgetProgressItem, CashFlowChart, CategoryPie, FiltersBar, TransactionForm
-from phoenix.ui.workers import DbTaskWorker, WorkerPool
-from phoenix.ui.widgets.card import CardWidget
-from phoenix.ui.widgets.empty_state import EmptyState
-from phoenix.ui.widgets.stat_card import StatCard
-from phoenix.ui.widgets.table_widget import DataTableWidget
+from phoenix.modules.finances.dialogs import BudgetDialog, TransactionDialog
+from phoenix.modules.finances.widgets import BudgetProgressCard, ImportReviewTable, TransactionFilters, TransactionTable
+from phoenix.ui.widgets.alert_banner import AlertBanner
+from phoenix.ui.widgets.donut_chart import DonutChart
+from phoenix.ui.widgets.drop_zone import DropZone
+from phoenix.ui.widgets.finance_bar_chart import FinanceBarChart
+from phoenix.ui.widgets.line_chart import LineChart
+from phoenix.ui.widgets.summary_card import SummaryCard
 from phoenix.utils.constants import Events
 
 
@@ -21,267 +32,393 @@ class FinancesView(QWidget):
         super().__init__()
         self.controller = FinancesController()
         self.event_bus = event_bus
-        self.worker_pool = WorkerPool()
-        self._workers: list[DbTaskWorker] = []
+        self._import_rows: list[dict[str, Any]] = []
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
+        layout.setSpacing(12)
+
+        self.banner = AlertBanner("Modulo financeiro pronto", "success")
+        self.banner.hide()
+        layout.addWidget(self.banner)
 
         self.tabs = QTabWidget()
+        self.tabs.setObjectName("finance-tabs")
         layout.addWidget(self.tabs)
 
-        self.summary_tab = QWidget()
+        self.overview_tab = QWidget()
         self.transactions_tab = QWidget()
         self.budgets_tab = QWidget()
-        self.charts_tab = QWidget()
-        self.tabs.addTab(self.summary_tab, "Resumo")
+        self.analytics_tab = QWidget()
+        self.import_export_tab = QWidget()
+
+        self.tabs.addTab(self.overview_tab, "Visao Geral")
         self.tabs.addTab(self.transactions_tab, "Transacoes")
         self.tabs.addTab(self.budgets_tab, "Orcamentos")
-        self.tabs.addTab(self.charts_tab, "Graficos")
+        self.tabs.addTab(self.analytics_tab, "Analises")
+        self.tabs.addTab(self.import_export_tab, "Importar/Exportar")
 
-        self._build_summary_tab()
+        self._build_overview_tab()
         self._build_transactions_tab()
         self._build_budgets_tab()
-        self._build_charts_tab()
+        self._build_analytics_tab()
+        self._build_import_export_tab()
         self.refresh()
-        self._run_worker(
-            self.controller.generate_monthly_pdf_if_due,
-            success_message=lambda output: f"Relatorio mensal: {output}" if output else "Relatorio mensal ja atualizado.",
-            refresh_after=False,
-        )
 
-    def _build_summary_tab(self) -> None:
-        layout = QVBoxLayout(self.summary_tab)
-        grid = QHBoxLayout()
-        self.balance_card = StatCard("Saldo total", "R$ 0,00", "")
-        self.income_card = StatCard("Receita do mes", "R$ 0,00", "")
-        self.expense_card = StatCard("Despesa do mes", "R$ 0,00", "")
-        self.savings_card = StatCard("Economia do mes", "R$ 0,00", "")
+    def _build_overview_tab(self) -> None:
+        root = QVBoxLayout(self.overview_tab)
+        root.setSpacing(12)
+
+        cards_row = QHBoxLayout()
+        self.balance_card = SummaryCard("Saldo", "R$ 0,00", "Consolidado")
+        self.income_card = SummaryCard("Receitas", "R$ 0,00", "Mes atual")
+        self.expense_card = SummaryCard("Despesas", "R$ 0,00", "Mes atual")
+        self.savings_card = SummaryCard("Economia", "R$ 0,00", "Mes atual")
+
         for card in [self.balance_card, self.income_card, self.expense_card, self.savings_card]:
-            grid.addWidget(card)
-        layout.addLayout(grid)
+            cards_row.addWidget(card)
+        root.addLayout(cards_row)
 
-        charts = QHBoxLayout()
-        self.summary_flow_chart = CashFlowChart()
-        self.summary_category_chart = CategoryPie()
-        charts.addWidget(self.summary_flow_chart, 1)
-        charts.addWidget(self.summary_category_chart, 1)
-        layout.addLayout(charts)
+        charts_row = QHBoxLayout()
+        self.overview_flow_chart = FinanceBarChart()
+        self.overview_category_chart = DonutChart()
+        charts_row.addWidget(self.overview_flow_chart, 1)
+        charts_row.addWidget(self.overview_category_chart, 1)
+        root.addLayout(charts_row)
 
     def _build_transactions_tab(self) -> None:
-        layout = QVBoxLayout(self.transactions_tab)
-        self.filters = FiltersBar()
-        layout.addWidget(self.filters)
+        root = QVBoxLayout(self.transactions_tab)
+        root.setSpacing(10)
+
+        self.filters = TransactionFilters()
+        root.addWidget(self.filters)
+
         controls = QHBoxLayout()
-        self.import_button = QPushButton("Importar OFX/CSV")
-        self.import_button.setObjectName("btn-secondary")
-        self.export_button = QPushButton("Exportar PDF")
-        self.export_button.setObjectName("btn-secondary")
-        self.category_button = QPushButton("Nova categoria")
-        self.category_button.setObjectName("btn-secondary")
-        controls.addWidget(self.import_button)
-        controls.addWidget(self.export_button)
-        controls.addWidget(self.category_button)
+        self.new_transaction_button = QPushButton("Nova transacao")
+        self.new_transaction_button.setObjectName("btn-primary")
+        self.edit_transaction_button = QPushButton("Editar")
+        self.edit_transaction_button.setObjectName("btn-secondary")
+        self.delete_transaction_button = QPushButton("Excluir")
+        self.delete_transaction_button.setObjectName("btn-danger")
+
+        controls.addWidget(self.new_transaction_button)
+        controls.addWidget(self.edit_transaction_button)
+        controls.addWidget(self.delete_transaction_button)
         controls.addStretch(1)
-        layout.addLayout(controls)
+        root.addLayout(controls)
 
-        self.form = TransactionForm()
-        layout.addWidget(self.form)
-        self.table = DataTableWidget()
-        layout.addWidget(self.table)
-        self.empty_state = EmptyState("Sem transacoes", "Adicione uma transacao ou importe um CSV para visualizar movimentos.", "Nova transacao")
-        self.empty_state.action_button.clicked.connect(lambda: self.form.title_input.setFocus())
-        layout.addWidget(self.empty_state)
-        self.empty_state.hide()
+        self.transactions_table = TransactionTable()
+        root.addWidget(self.transactions_table, 1)
 
-        self.filters.period.currentTextChanged.connect(lambda _: self._reload())
-        self.filters.tx_type.currentTextChanged.connect(self._on_type_changed)
-        self.filters.category.currentTextChanged.connect(lambda _: self._reload())
-        self.filters.start_date.dateChanged.connect(lambda _: self._reload())
-        self.filters.end_date.dateChanged.connect(lambda _: self._reload())
-        self.form.save_button.clicked.connect(self._save)
-        self.import_button.clicked.connect(self._import_csv)
-        self.export_button.clicked.connect(self._export_pdf)
-        self.category_button.clicked.connect(self._add_category)
+        self.filters.apply_button.clicked.connect(self._reload_transactions)
+        self.filters.period.currentTextChanged.connect(lambda _: self._reload_transactions())
+        self.filters.tx_type.currentTextChanged.connect(lambda _: self._reload_categories())
+        self.filters.search.textChanged.connect(lambda _: self._reload_transactions())
+
+        self.new_transaction_button.clicked.connect(self._create_transaction)
+        self.edit_transaction_button.clicked.connect(self._edit_selected_transaction)
+        self.delete_transaction_button.clicked.connect(self._delete_selected_transaction)
 
     def _build_budgets_tab(self) -> None:
-        self.budgets_layout = QVBoxLayout(self.budgets_tab)
-        self.budgets_layout.setSpacing(12)
+        root = QVBoxLayout(self.budgets_tab)
+        root.setSpacing(10)
 
-    def _build_charts_tab(self) -> None:
-        layout = QHBoxLayout(self.charts_tab)
-        self.pie_chart = CategoryPie()
-        self.flow_chart = CashFlowChart()
-        self.net_worth_chart = CashFlowChart()
-        layout.addWidget(self.pie_chart, 1)
-        layout.addWidget(self.flow_chart, 1)
-        layout.addWidget(self.net_worth_chart, 1)
+        actions = QHBoxLayout()
+        self.new_budget_button = QPushButton("Novo orcamento")
+        self.new_budget_button.setObjectName("btn-primary")
+        actions.addWidget(self.new_budget_button)
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self.budgets_scroll = QScrollArea()
+        self.budgets_scroll.setWidgetResizable(True)
+        self.budgets_container = QWidget()
+        self.budgets_layout = QVBoxLayout(self.budgets_container)
+        self.budgets_layout.setSpacing(10)
+        self.budgets_scroll.setWidget(self.budgets_container)
+        root.addWidget(self.budgets_scroll)
+
+        self.new_budget_button.clicked.connect(self._create_budget)
+
+    def _build_analytics_tab(self) -> None:
+        root = QVBoxLayout(self.analytics_tab)
+        root.setSpacing(12)
+
+        top_row = QHBoxLayout()
+        self.analytics_cash_flow = FinanceBarChart()
+        self.analytics_distribution = DonutChart()
+        top_row.addWidget(self.analytics_cash_flow, 1)
+        top_row.addWidget(self.analytics_distribution, 1)
+        root.addLayout(top_row)
+
+        self.analytics_equity = LineChart()
+        root.addWidget(self.analytics_equity)
+
+    def _build_import_export_tab(self) -> None:
+        root = QVBoxLayout(self.import_export_tab)
+        root.setSpacing(12)
+
+        self.drop_zone = DropZone()
+        root.addWidget(self.drop_zone)
+
+        controls = QHBoxLayout()
+        self.select_file_button = QPushButton("Selecionar arquivo")
+        self.select_file_button.setObjectName("btn-secondary")
+        self.import_button = QPushButton("Importar aprovadas")
+        self.import_button.setObjectName("btn-primary")
+        self.export_pdf_button = QPushButton("Exportar PDF")
+        self.export_pdf_button.setObjectName("btn-secondary")
+        controls.addWidget(self.select_file_button)
+        controls.addWidget(self.import_button)
+        controls.addWidget(self.export_pdf_button)
+        controls.addStretch(1)
+        root.addLayout(controls)
+
+        self.import_summary = QLabel("Nenhum arquivo analisado")
+        self.import_summary.setObjectName("label-muted")
+        root.addWidget(self.import_summary)
+
+        self.import_review_table = ImportReviewTable()
+        root.addWidget(self.import_review_table, 1)
+
+        self.drop_zone.fileDropped.connect(self._review_file)
+        self.select_file_button.clicked.connect(self._select_and_review_file)
+        self.import_button.clicked.connect(self._import_reviewed_rows)
+        self.export_pdf_button.clicked.connect(self._export_pdf)
 
     def refresh(self) -> None:
-        summary = self.controller.summary_cards()
-        self.balance_card.update_values(self._currency(summary["balance"]), "+saldo consolidado")
-        self.income_card.update_values(self._currency(summary["income"]), "+entrada no periodo")
-        self.expense_card.update_values(self._currency(summary["expense"]), "-saida no periodo")
-        self.savings_card.update_values(self._currency(summary["savings"]), "+economia liquida")
+        summary = self.controller.get_monthly_summary()
+        self.balance_card.update_data(self._currency(summary["balance"]), "Consolidado")
+        self.income_card.update_data(self._currency(summary["income"]), self._variation_label(summary["income_variation"]))
+        self.expense_card.update_data(self._currency(summary["expense"]), self._variation_label(summary["expense_variation"]))
+        self.savings_card.update_data(self._currency(summary["savings"]), self._variation_label(summary["savings_variation"]))
 
-        labels, incomes, expenses = self.controller.cash_flow_last_six_months()
-        self.summary_flow_chart.plot_grouped_bar(labels, [("Receitas", incomes, "#10b981"), ("Despesas", expenses, "#ef4444")])
-        category_labels, category_values = self.controller.category_distribution()
-        self.summary_category_chart.plot_pie(category_labels, category_values, ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0891b2"])
-        self.flow_chart.plot_grouped_bar(labels, [("Receitas", incomes, "#10b981"), ("Despesas", expenses, "#ef4444")])
-        self.pie_chart.plot_pie(category_labels, category_values, ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0891b2"])
-        net_labels, net_values = self.controller.net_worth_trend()
-        self.net_worth_chart.plot_line(net_labels, net_values, color="#6366f1", fill=True)
+        labels, incomes, expenses, _ = self.controller.monthly_evolution(months=6)
+        self.overview_flow_chart.plot_grouped_bar(
+            labels,
+            [("Receitas", incomes, "#10b981"), ("Despesas", expenses, "#ef4444")],
+        )
+
+        categories, values = self.controller.category_breakdown()
+        self.overview_category_chart.plot_pie(categories, values, ["#f59e0b", "#10b981", "#ef4444", "#0891b2", "#6366f1"])
+
         self._reload_categories()
-        self._reload()
+        self._reload_transactions()
         self._reload_budgets()
+        self._reload_analytics()
 
-    def _reload(self) -> None:
-        start = self.filters.start_date.date().toPyDate()
-        end = self.filters.end_date.date().toPyDate()
-        rows = []
-        for transaction in self.controller.list_transactions(
+    def _reload_transactions(self) -> None:
+        rows = self.controller.list_transactions_advanced(
             period=self.filters.period.currentText(),
             tx_type=self.filters.tx_type.currentText(),
             category=self.filters.category.currentText(),
-            start=start,
-            end=end,
-        ):
-            rows.append([
-                transaction.date.strftime("%d/%m/%Y"),
-                transaction.title,
-                transaction.category or "Outros",
-                transaction.type,
-                self._currency(transaction.amount),
-            ])
-        self.table.set_data(["Data", "Descricao", "Categoria", "Tipo", "Valor"], rows)
-        self.table.setVisible(bool(rows))
-        self.empty_state.setVisible(not rows)
-
-    def _save(self) -> None:
-        if not self.form.validator.is_valid():
-            self.form.validation_label.setText("Corrija os campos destacados.")
-            self._publish_toast("Corrija os campos destacados.")
-            return
-
-        title = self.form.title_input.text().strip()
-        amount_text = self.form.amount_input.text().strip()
-        tx_type = self.form.type_input.currentText()
-        category = self.form.category_input.currentText() or "Outros"
-        account = self.form.account_input.text().strip() or "Principal"
-        note = self.form.note_input.text().strip()
-        tx_date = self.form.date_input.date().toPyDate()
-
-        amount = float(amount_text.replace(",", "."))
-        self.form.validation_label.setText("")
-
-        self.controller.create_transaction(title, amount, tx_type, category, account, tx_date, note)
-        self.form.title_input.clear()
-        self.form.amount_input.clear()
-        self.form.note_input.clear()
-        self.refresh()
-        self._publish_toast("Transacao salva com sucesso.")
-        self._publish_data_changed()
+            start=self.filters.start_date.date().toPyDate(),
+            end=self.filters.end_date.date().toPyDate(),
+            search=self.filters.search.text(),
+        )
+        mapped = [
+            {
+                "id": tx.id,
+                "date": tx.date.strftime("%d/%m/%Y"),
+                "title": tx.title,
+                "category": tx.category or "Outros",
+                "type": tx.type,
+                "account": tx.account or "Principal",
+                "amount": tx.amount,
+                "note": tx.note or "",
+            }
+            for tx in rows
+        ]
+        self.transactions_table.set_rows(mapped, self._currency)
 
     def _reload_budgets(self) -> None:
         while self.budgets_layout.count():
-            item = self.budgets_layout.takeAt(0)
-            widget = item.widget()
+            child = self.budgets_layout.takeAt(0)
+            widget = child.widget()
             if widget is not None:
                 widget.deleteLater()
-        for budget in self.controller.budget_progress():
-            self.budgets_layout.addWidget(
-                BudgetProgressItem(
-                    str(budget["category"]),
-                    float(budget["spent"]),
-                    float(budget["limit"]),
-                    float(budget["ratio"]),
-                )
+
+        budgets = self.controller.get_budget_status()
+        if not budgets:
+            empty = QLabel("Nenhum orcamento cadastrado")
+            empty.setObjectName("label-muted")
+            self.budgets_layout.addWidget(empty)
+            self.budgets_layout.addStretch(1)
+            return
+
+        for item in budgets:
+            card = BudgetProgressCard(
+                str(item["category"]),
+                float(item["spent"]),
+                float(item["limit"]),
+                float(item["ratio"]),
+                str(item["status"]),
             )
+            self.budgets_layout.addWidget(card)
         self.budgets_layout.addStretch(1)
 
+    def _reload_analytics(self) -> None:
+        labels, incomes, expenses, _ = self.controller.monthly_evolution(months=6)
+        self.analytics_cash_flow.plot_grouped_bar(
+            labels,
+            [("Receitas", incomes, "#10b981"), ("Despesas", expenses, "#ef4444")],
+        )
+        categories, values = self.controller.category_breakdown()
+        self.analytics_distribution.plot_pie(categories, values, ["#f59e0b", "#10b981", "#ef4444", "#0891b2", "#6366f1"])
+        equity_labels, equity_values = self.controller.patrimonial_evolution(months=12)
+        self.analytics_equity.plot_line(equity_labels, equity_values, color="#f39c12", fill=True)
+
     def _reload_categories(self) -> None:
-        current_type = self.form.type_input.currentText()
-        categories = self.controller.list_categories("income" if current_type == "income" else "expense")
-        self.form.category_input.clear()
-        self.form.category_input.addItems(categories or ["Outros"])
+        current_type = self.filters.tx_type.currentText()
+        if current_type in {"income", "expense"}:
+            categories = self.controller.list_categories(current_type)
+        else:
+            categories = self.controller.list_categories()
+
+        selected = self.filters.category.currentText()
+        self.filters.category.blockSignals(True)
         self.filters.category.clear()
         self.filters.category.addItem("Todas")
-        self.filters.category.addItems(self.controller.list_categories())
+        self.filters.category.addItems(categories)
+        if selected:
+            self.filters.category.setCurrentText(selected)
+        self.filters.category.blockSignals(False)
 
-    def _on_type_changed(self, value: str) -> None:
-        self._reload_categories()
-        self._reload()
+    def _create_transaction(self) -> None:
+        dialog = TransactionDialog(self.controller.list_categories(), self._accounts())
+        if dialog.exec() == dialog.DialogCode.Accepted:
+            payload = dialog.payload()
+            self.controller.save_transaction(**payload)
+            self._notify("Transacao criada", "success")
+            self._publish_data_changed()
+            self.refresh()
 
-    def _import_csv(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, "Importar arquivo", "", "Arquivos (*.csv *.ofx)")
-        if not file_path:
+    def _edit_selected_transaction(self) -> None:
+        transaction_id = self.transactions_table.selected_transaction_id()
+        if transaction_id is None:
+            self._notify("Selecione uma transacao", "warning")
             return
-        self._run_worker(
-            self.controller.import_file,
-            file_path,
-            success_message=lambda imported: f"{imported} transacoes adicionadas.",
+
+        selected = self.controller.list_transactions_advanced(
+            period=self.filters.period.currentText(),
+            tx_type=self.filters.tx_type.currentText(),
+            category=self.filters.category.currentText(),
+            start=self.filters.start_date.date().toPyDate(),
+            end=self.filters.end_date.date().toPyDate(),
+            search=self.filters.search.text(),
         )
+        target = next((tx for tx in selected if tx.id == transaction_id), None)
+        if target is None:
+            self._notify("Transacao nao encontrada", "error")
+            return
+
+        dialog = TransactionDialog(
+            self.controller.list_categories(),
+            self._accounts(),
+            payload={
+                "title": target.title,
+                "amount": target.amount,
+                "type": target.type,
+                "category": target.category or "Outros",
+                "account": target.account or "Principal",
+                "date": target.date,
+                "note": target.note or "",
+            },
+        )
+        if dialog.exec() == dialog.DialogCode.Accepted:
+            payload = dialog.payload()
+            payload["transaction_id"] = transaction_id
+            self.controller.save_transaction(**payload)
+            self._notify("Transacao atualizada", "success")
+            self._publish_data_changed()
+            self.refresh()
+
+    def _delete_selected_transaction(self) -> None:
+        transaction_id = self.transactions_table.selected_transaction_id()
+        if transaction_id is None:
+            self._notify("Selecione uma transacao", "warning")
+            return
+        self.controller.delete_transaction(transaction_id)
+        self._notify("Transacao removida", "success")
+        self._publish_data_changed()
+        self.refresh()
+
+    def _create_budget(self) -> None:
+        dialog = BudgetDialog(parent=self)
+        if dialog.exec() == dialog.DialogCode.Accepted:
+            payload = dialog.payload()
+            if not payload["category"] or float(payload["amount"]) <= 0:
+                self._notify("Categoria e limite valido sao obrigatorios", "warning")
+                return
+            self.controller.set_budget(
+                str(payload["category"]),
+                float(payload["amount"]),
+                period=str(payload["period"]),
+            )
+            self._notify("Orcamento salvo", "success")
+            self._publish_data_changed()
+            self.refresh()
+
+    def _select_and_review_file(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo", "", "Arquivos (*.csv *.ofx)")
+        if file_path:
+            self._review_file(file_path)
+
+    def _review_file(self, file_path: str) -> None:
+        try:
+            result = self.controller.review_import(file_path)
+        except Exception as exc:  # noqa: BLE001
+            self._notify(f"Falha ao analisar arquivo: {exc}", "error")
+            return
+
+        self._import_rows = list(result["rows"])
+        self.import_review_table.set_review_rows(self._import_rows)
+        self.import_summary.setText(
+            f"Arquivo: {Path(file_path).name} | Total: {result['total']} | Novas: {result['new']} | Duplicadas: {result['duplicates']}"
+        )
+        self._notify("Revisao de importacao concluida", "info")
+
+    def _import_reviewed_rows(self) -> None:
+        if not self._import_rows:
+            self._notify("Nenhuma linha para importar", "warning")
+            return
+        result = self.controller.import_reviewed_transactions(self._import_rows, skip_duplicates=True)
+        self._notify(f"Importadas: {result['inserted']} | Ignoradas: {result['skipped']}", "success")
+        self._publish_data_changed()
+        self.refresh()
 
     def _export_pdf(self) -> None:
-        output_path, _ = QFileDialog.getSaveFileName(self, "Exportar PDF", str(Path.home() / "extrato_phoenix.pdf"), "PDF (*.pdf)")
+        output_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar PDF",
+            str(Path.home() / "relatorio_financeiro_phoenix.pdf"),
+            "PDF (*.pdf)",
+        )
         if not output_path:
             return
-        self._run_worker(
-            self.controller.export_monthly_pdf,
-            output_path,
-            self.filters.period.currentText(),
-            success_message=lambda result: f"Extrato salvo em {result}.",
-            refresh_after=False,
-        )
+        try:
+            destination = self.controller.export_monthly_pdf(output_path, period=self.filters.period.currentText())
+            self._notify(f"PDF exportado em {destination}", "success")
+        except Exception as exc:  # noqa: BLE001
+            self._notify(f"Falha ao exportar PDF: {exc}", "error")
 
-    def _add_category(self) -> None:
-        category, ok = QInputDialog.getText(self, "Nova categoria", "Nome da categoria:")
-        if not ok or not category.strip():
-            return
-        kind = self.form.type_input.currentText()
-        self.controller.add_category(category.strip(), "income" if kind == "income" else "expense")
-        self._reload_categories()
-        self._publish_toast("Categoria adicionada.")
+    def _accounts(self) -> list[str]:
+        rows = self.controller.list_transactions_advanced(period="ano")
+        accounts = sorted({(tx.account or "Principal") for tx in rows})
+        return accounts or ["Principal"]
 
-    def _run_worker(
-        self,
-        task,
-        *args: object,
-        success_message,
-        refresh_after: bool = True,
-    ) -> None:
-        worker = DbTaskWorker(task, *args)
-        worker.signals.completed.connect(
-            lambda result: self._handle_worker_success(worker, result, success_message, refresh_after)
-        )
-        worker.signals.failed.connect(lambda message: self._handle_worker_failure(worker, message))
-        self._workers.append(worker)
-        self.worker_pool.submit(worker)
-        self._publish_toast("Processando em segundo plano...")
-
-    def _handle_worker_success(self, worker: DbTaskWorker, result: object, success_message, refresh_after: bool) -> None:
-        self._dispose_worker(worker)
-        if refresh_after:
-            self.refresh()
-            self._publish_data_changed()
-        self._publish_toast(str(success_message(result)))
-
-    def _handle_worker_failure(self, worker: DbTaskWorker, message: str) -> None:
-        self._dispose_worker(worker)
-        self._publish_toast(f"Falha: {message}")
-
-    def _dispose_worker(self, worker: DbTaskWorker) -> None:
-        if worker in self._workers:
-            self._workers.remove(worker)
+    def _notify(self, message: str, level: str = "info") -> None:
+        self.banner.set_message(message, level)
+        if self.event_bus is not None:
+            self.event_bus.publish(Events.SHOW_TOAST, {"message": message})
 
     def _publish_data_changed(self) -> None:
         if self.event_bus is not None:
             self.event_bus.publish(Events.DATA_CHANGED, {"module": "finances"})
 
-    def _publish_toast(self, message: str) -> None:
-        if self.event_bus is not None:
-            self.event_bus.publish(Events.SHOW_TOAST, {"message": message})
-
     def _currency(self, value: float) -> str:
         return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _variation_label(self, value: float) -> str:
+        sign = "+" if value >= 0 else ""
+        return f"{sign}{value:.1f}% vs mes anterior"

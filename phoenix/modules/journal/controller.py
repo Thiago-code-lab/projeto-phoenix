@@ -44,6 +44,8 @@ class JournalController:
                 content=content,
                 mood=int(data.get("mood")) if data.get("mood") not in (None, "") else None,
                 tags=data.get("tags") or None,
+                word_count=int(data.get("word_count", 0) or 0),
+                template=str(data.get("template", "")).strip() or None,
             )
 
     def update(self, id: int, data: dict) -> JournalEntry:
@@ -54,6 +56,9 @@ class JournalController:
                 raise ValueError("Entrada nao encontrada.")
             payload: dict[str, object] = {}
             for key in ["title", "content", "tags", "date"]:
+                if key in data:
+                    payload[key] = data[key]
+            for key in ["word_count", "template"]:
                 if key in data:
                     payload[key] = data[key]
             if "mood" in data:

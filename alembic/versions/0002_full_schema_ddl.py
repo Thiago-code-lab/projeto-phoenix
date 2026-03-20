@@ -16,61 +16,9 @@ down_revision = "0001_initial_baseline"
 branch_labels = None
 depends_on = None
 
-INDEX_STATEMENTS = [
-    "CREATE INDEX IF NOT EXISTS ix_goals_status ON goals (status)",
-    "CREATE INDEX IF NOT EXISTS ix_goals_target_date ON goals (target_date)",
-    "CREATE INDEX IF NOT EXISTS ix_goal_milestones_goal_id ON goal_milestones (goal_id)",
-    "CREATE INDEX IF NOT EXISTS ix_habits_active ON habits (active)",
-    "CREATE INDEX IF NOT EXISTS ix_habit_logs_habit_id ON habit_logs (habit_id)",
-    "CREATE INDEX IF NOT EXISTS ix_habit_logs_date ON habit_logs (date)",
-    "CREATE INDEX IF NOT EXISTS ix_transactions_date ON transactions (date)",
-    "CREATE INDEX IF NOT EXISTS ix_transactions_type ON transactions (type)",
-    "CREATE INDEX IF NOT EXISTS ix_transactions_category ON transactions (category)",
-    "CREATE INDEX IF NOT EXISTS ix_budgets_category ON budgets (category)",
-    "CREATE INDEX IF NOT EXISTS ix_books_status ON books (status)",
-    "CREATE INDEX IF NOT EXISTS ix_books_updated_at ON books (updated_at)",
-    "CREATE INDEX IF NOT EXISTS ix_health_logs_date ON health_logs (date)",
-    "CREATE INDEX IF NOT EXISTS ix_workouts_date ON workouts (date)",
-    "CREATE INDEX IF NOT EXISTS ix_journal_entries_date ON journal_entries (date)",
-    "CREATE INDEX IF NOT EXISTS ix_projects_active ON projects (active)",
-    "CREATE INDEX IF NOT EXISTS ix_tasks_project_id ON tasks (project_id)",
-    "CREATE INDEX IF NOT EXISTS ix_tasks_status ON tasks (status)",
-    "CREATE INDEX IF NOT EXISTS ix_tasks_due_date ON tasks (due_date)",
-    "CREATE INDEX IF NOT EXISTS ix_focus_sessions_date ON focus_sessions (date)",
-    "CREATE INDEX IF NOT EXISTS ix_focus_sessions_task_id ON focus_sessions (task_id)",
-    "CREATE INDEX IF NOT EXISTS ix_notes_parent_id ON notes (parent_id)",
-    "CREATE INDEX IF NOT EXISTS ix_notes_updated_at ON notes (updated_at)",
-    "CREATE INDEX IF NOT EXISTS ix_reviews_period_type ON reviews (period_type)",
-    "CREATE INDEX IF NOT EXISTS ix_reviews_created_at ON reviews (created_at)",
-]
+INDEX_STATEMENTS: list[str] = []
 
-DROP_INDEX_STATEMENTS = [
-    "DROP INDEX IF EXISTS ix_reviews_created_at",
-    "DROP INDEX IF EXISTS ix_reviews_period_type",
-    "DROP INDEX IF EXISTS ix_notes_updated_at",
-    "DROP INDEX IF EXISTS ix_notes_parent_id",
-    "DROP INDEX IF EXISTS ix_focus_sessions_task_id",
-    "DROP INDEX IF EXISTS ix_focus_sessions_date",
-    "DROP INDEX IF EXISTS ix_tasks_due_date",
-    "DROP INDEX IF EXISTS ix_tasks_status",
-    "DROP INDEX IF EXISTS ix_tasks_project_id",
-    "DROP INDEX IF EXISTS ix_projects_active",
-    "DROP INDEX IF EXISTS ix_journal_entries_date",
-    "DROP INDEX IF EXISTS ix_workouts_date",
-    "DROP INDEX IF EXISTS ix_health_logs_date",
-    "DROP INDEX IF EXISTS ix_books_updated_at",
-    "DROP INDEX IF EXISTS ix_books_status",
-    "DROP INDEX IF EXISTS ix_budgets_category",
-    "DROP INDEX IF EXISTS ix_transactions_category",
-    "DROP INDEX IF EXISTS ix_transactions_type",
-    "DROP INDEX IF EXISTS ix_transactions_date",
-    "DROP INDEX IF EXISTS ix_habit_logs_date",
-    "DROP INDEX IF EXISTS ix_habit_logs_habit_id",
-    "DROP INDEX IF EXISTS ix_habits_active",
-    "DROP INDEX IF EXISTS ix_goal_milestones_goal_id",
-    "DROP INDEX IF EXISTS ix_goals_target_date",
-    "DROP INDEX IF EXISTS ix_goals_status",
-]
+DROP_INDEX_STATEMENTS: list[str] = []
 
 TABLE_DROP_ORDER = [
     "goal_milestones",
